@@ -1,14 +1,22 @@
 import axios from 'axios'
 import { useAuthStore } from '../stores/authStore'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+const getBaseApiUrl = (): string => {
+  let url = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+  url = url.trim().replace(/\/+$/, '')
+  if (!url.endsWith('/api/v1')) {
+    url = `${url}/api/v1`
+  }
+  return url
+}
+
+const API_URL = getBaseApiUrl()
 
 export const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true,
 })
 
 // Request Interceptor
@@ -82,7 +90,6 @@ apiClient.interceptors.response.use(
           headers: {
             'Content-Type': 'application/json',
           },
-          withCredentials: true,
         })
 
         const { access_token, refresh_token: newRefreshToken } = response.data
