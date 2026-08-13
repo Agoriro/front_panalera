@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-dark: var(--primary-dark);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border-color);
+  --color-border-soft: var(--border-soft);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-danger: var(--danger);
+
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+@layer base {
+  :root {
+    --background: #FAFAF8; /* surface */
+    --foreground: #2D2D3A; /* text-base */
+
+    --card: #FFFFFF; /* surface-card */
+    --card-foreground: #2D2D3A;
+
+    --popover: #FFFFFF;
+    --popover-foreground: #2D2D3A;
+
+    --primary: #9B7DB6;
+    --primary-foreground: #FFFFFF;
+    --primary-dark: #7A5F99;
+
+    --secondary: #7CC4A4;
+    --secondary-foreground: #FFFFFF;
+
+    --accent: #F4A97F;
+    --accent-foreground: #2D2D3A;
+
+    --muted: #E8E4F0; /* border-soft */
+    --muted-foreground: #6B6B7B; /* text-muted */
+
+    --destructive: #E05252; /* danger */
+    --destructive-foreground: #FFFFFF;
+
+    --border-color: #E8E4F0; /* border-soft */
+    --border-soft: #E8E4F0;
+    --input: #E8E4F0;
+    --ring: #9B7DB6;
+    --danger: #E05252;
+
+    --radius: 0.5rem;
+
+    --font-display: 'Plus Jakarta Sans', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  .dark {
+    --background: #1A1A24; /* surface dark */
+    --foreground: #FAFAF8; /* text-base dark */
+
+    --card: #242433; /* surface-card dark */
+    --card-foreground: #FAFAF8;
+
+    --popover: #242433;
+    --popover-foreground: #FAFAF8;
+
+    --primary: #9B7DB6;
+    --primary-foreground: #FFFFFF;
+    --primary-dark: #7A5F99;
+
+    --secondary: #7CC4A4;
+    --secondary-foreground: #FFFFFF;
+
+    --accent: #F4A97F;
+    --accent-foreground: #1A1A24;
+
+    --muted: #2D2D3A; /* border-soft dark */
+    --muted-foreground: #A0A0B0; /* text-muted dark */
+
+    --destructive: #E05252;
+    --destructive-foreground: #FFFFFF;
+
+    --border-color: #2D2D3A; /* border-soft dark */
+    --border-soft: #2D2D3A;
+    --input: #2D2D3A;
+    --ring: #9B7DB6;
+    --danger: #E05252;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--border-color);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-body);
+  }
+}
