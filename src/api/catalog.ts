@@ -79,7 +79,6 @@ export async function getColorsApi(): Promise<Color[]> {
   return data.map((item) => ({
     ...item,
     name: item.name ?? item.name_color ?? item.color_name ?? '',
-    hex_value: item.hex_value ?? item.hex_color ?? '',
   }))
 }
 

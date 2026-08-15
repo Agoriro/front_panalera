@@ -47,11 +47,10 @@ export const ColorsPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 8
 
-  const filteredColors = (colors || []).filter(
-    (c) =>
-      (c?.name || (c as any)?.name_color || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
-      (c?.hex_value || (c as any)?.hex_color || '').toLowerCase().includes((searchTerm || '').toLowerCase())
-  )
+  const filteredColors = (colors || []).filter((c) => {
+    const name = c?.name || (c as any)?.name_color || (c as any)?.color_name || ''
+    return name.toLowerCase().includes((searchTerm || '').toLowerCase())
+  })
 
   const totalPages = Math.ceil(filteredColors.length / itemsPerPage)
   const paginatedColors = filteredColors.slice(
@@ -135,7 +134,7 @@ export const ColorsPage: React.FC = () => {
             </span>
             <Input
               type="text"
-              placeholder="Buscar color o hex..."
+              placeholder="Buscar color..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value)
@@ -176,7 +175,6 @@ export const ColorsPage: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="font-display font-semibold">Nombre</TableHead>
-                  <TableHead className="font-display font-semibold">Código Muestra</TableHead>
                   <TableHead className="text-right font-display font-semibold">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -184,18 +182,7 @@ export const ColorsPage: React.FC = () => {
                 {paginatedColors.map((color) => (
                   <TableRow key={color.id} className="hover:bg-surface/50 dark:hover:bg-muted/10">
                     <TableCell className="font-medium text-text-base dark:text-white">
-                      {color?.name || (color as any)?.name_color || 'Sin nombre'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="h-4 w-4 rounded-full border border-border-soft dark:border-border-soft"
-                          style={{ backgroundColor: color.hex_value || (color as any)?.hex_color || '#ccc' }}
-                        />
-                        <span className="text-xs text-text-muted">
-                          {color.hex_value || (color as any)?.hex_color || 'N/A'}
-                        </span>
-                      </div>
+                      {color?.name || (color as any)?.name_color || (color as any)?.color_name || 'Sin nombre'}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
