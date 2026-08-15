@@ -50,10 +50,10 @@ export const SuppliersPage: React.FC = () => {
   const itemsPerPage = 8
 
   // Filter suppliers based on search
-  const filteredSuppliers = suppliers.filter(
+  const filteredSuppliers = (suppliers || []).filter(
     (s) =>
-      s.name_supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.address.toLowerCase().includes(searchTerm.toLowerCase())
+      (s?.name_supplier || (s as any)?.name || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+      (s?.address || '').toLowerCase().includes((searchTerm || '').toLowerCase())
   )
 
   // Pagination calculations
@@ -194,9 +194,9 @@ export const SuppliersPage: React.FC = () => {
                 {paginatedSuppliers.map((supplier) => (
                   <TableRow key={supplier.id} className="hover:bg-surface/50 dark:hover:bg-muted/10">
                     <TableCell className="font-medium text-text-base dark:text-white">
-                      {supplier.name_supplier}
+                      {supplier?.name_supplier || (supplier as any)?.name || 'Sin nombre'}
                     </TableCell>
-                    <TableCell className="text-text-muted">{supplier.address}</TableCell>
+                    <TableCell className="text-text-muted">{supplier?.address || 'Sin dirección'}</TableCell>
                     <TableCell>
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
@@ -276,7 +276,7 @@ export const SuppliersPage: React.FC = () => {
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Se eliminará permanentemente al proveedor{' '}
               <span className="font-semibold text-text-base dark:text-white">
-                {deletingSupplier?.name_supplier}
+                {deletingSupplier?.name_supplier || (deletingSupplier as any)?.name || ''}
               </span>{' '}
               de la base de datos.
             </AlertDialogDescription>

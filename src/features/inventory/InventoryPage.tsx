@@ -70,13 +70,13 @@ export const InventoryPage: React.FC = () => {
   const itemsPerPage = 8
 
   // Filtering Logic (client-side filters for category and stock on backend response)
-  const filteredInventory = inventory.filter((item) => {
-    const term = searchTerm.toLowerCase().trim()
+  const filteredInventory = (inventory || []).filter((item) => {
+    const term = (searchTerm || '').toLowerCase().trim()
     const matchesSearch =
       !term ||
-      item.description.toLowerCase().includes(term) ||
-      (item.code_inventory && item.code_inventory.toLowerCase().includes(term)) ||
-      (item.barcode_inventory && item.barcode_inventory.toLowerCase().includes(term))
+      (item?.description || '').toLowerCase().includes(term) ||
+      (item?.code_inventory && item.code_inventory.toLowerCase().includes(term)) ||
+      (item?.barcode_inventory && item.barcode_inventory.toLowerCase().includes(term))
 
     const matchesCategory = selectedCategory === 'all' || item.id_category === selectedCategory
 

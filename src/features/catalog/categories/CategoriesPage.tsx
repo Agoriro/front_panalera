@@ -47,9 +47,10 @@ export const CategoriesPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 8
 
-  const filteredCategories = categories.filter((c) =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredCategories = (categories || []).filter((c) => {
+    const name = c?.name || (c as any)?.name_category || (c as any)?.category_name || ''
+    return name.toLowerCase().includes((searchTerm || '').toLowerCase())
+  })
 
   const totalPages = Math.ceil(filteredCategories.length / itemsPerPage)
   const paginatedCategories = filteredCategories.slice(
@@ -182,7 +183,7 @@ export const CategoriesPage: React.FC = () => {
                 {paginatedCategories.map((category) => (
                   <TableRow key={category.id} className="hover:bg-surface/50 dark:hover:bg-muted/10">
                     <TableCell className="font-medium text-text-base dark:text-white">
-                      {category.name}
+                      {category?.name || (category as any)?.name_category || (category as any)?.category_name || 'Sin nombre'}
                     </TableCell>
                     <TableCell>
                       <span
@@ -261,7 +262,7 @@ export const CategoriesPage: React.FC = () => {
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Se eliminará permanentemente la categoría{' '}
               <span className="font-semibold text-text-base dark:text-white">
-                {deletingCategory?.name}
+                {deletingCategory?.name || (deletingCategory as any)?.name_category || ''}
               </span>{' '}
               de la base de datos.
             </AlertDialogDescription>

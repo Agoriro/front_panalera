@@ -47,10 +47,10 @@ export const ColorsPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 8
 
-  const filteredColors = colors.filter(
+  const filteredColors = (colors || []).filter(
     (c) =>
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.hex_value?.toLowerCase().includes(searchTerm.toLowerCase())
+      (c?.name || (c as any)?.name_color || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+      (c?.hex_value || (c as any)?.hex_color || '').toLowerCase().includes((searchTerm || '').toLowerCase())
   )
 
   const totalPages = Math.ceil(filteredColors.length / itemsPerPage)
@@ -185,17 +185,17 @@ export const ColorsPage: React.FC = () => {
                 {paginatedColors.map((color) => (
                   <TableRow key={color.id} className="hover:bg-surface/50 dark:hover:bg-muted/10">
                     <TableCell className="font-medium text-text-base dark:text-white">
-                      {color.name}
+                      {color?.name || (color as any)?.name_color || 'Sin nombre'}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {color.hex_value && (
-                          <div
-                            className="h-5 w-5 rounded-md border border-border-soft shadow-inner"
-                            style={{ backgroundColor: color.hex_value }}
-                          />
-                        )}
-                        <span className="font-mono text-xs">{color.hex_value || 'Sin código'}</span>
+                        <span
+                          className="h-4 w-4 rounded-full border border-border-soft dark:border-border-soft"
+                          style={{ backgroundColor: color.hex_value || (color as any)?.hex_color || '#ccc' }}
+                        />
+                        <span className="text-xs text-text-muted">
+                          {color.hex_value || (color as any)?.hex_color || 'N/A'}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -275,7 +275,7 @@ export const ColorsPage: React.FC = () => {
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Se eliminará permanentemente el color{' '}
               <span className="font-semibold text-text-base dark:text-white">
-                {deletingColor?.name}
+                {deletingColor?.name || (deletingColor as any)?.name_color || ''}
               </span>{' '}
               de la base de datos.
             </AlertDialogDescription>

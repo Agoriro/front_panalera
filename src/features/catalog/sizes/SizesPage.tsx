@@ -47,9 +47,10 @@ export const SizesPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 8
 
-  const filteredSizes = sizes.filter((s) =>
-    s.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredSizes = (sizes || []).filter((s) => {
+    const name = s?.name || (s as any)?.name_size || (s as any)?.size_name || ''
+    return name.toLowerCase().includes((searchTerm || '').toLowerCase())
+  })
 
   const totalPages = Math.ceil(filteredSizes.length / itemsPerPage)
   const paginatedSizes = filteredSizes.slice(
@@ -182,7 +183,7 @@ export const SizesPage: React.FC = () => {
                 {paginatedSizes.map((size) => (
                   <TableRow key={size.id} className="hover:bg-surface/50 dark:hover:bg-muted/10">
                     <TableCell className="font-medium text-text-base dark:text-white">
-                      {size.name}
+                      {size?.name || (size as any)?.name_size || (size as any)?.size_name || 'Sin nombre'}
                     </TableCell>
                     <TableCell>
                       <span
@@ -261,7 +262,7 @@ export const SizesPage: React.FC = () => {
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Se eliminará permanentemente la talla{' '}
               <span className="font-semibold text-text-base dark:text-white">
-                {deletingSize?.name}
+                {deletingSize?.name || (deletingSize as any)?.name_size || ''}
               </span>{' '}
               de la base de datos.
             </AlertDialogDescription>

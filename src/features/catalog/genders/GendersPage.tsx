@@ -47,9 +47,10 @@ export const GendersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 8
 
-  const filteredGenders = genders.filter((g) =>
-    g.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredGenders = (genders || []).filter((g) => {
+    const name = g?.name || (g as any)?.name_gender || (g as any)?.gender_name || ''
+    return name.toLowerCase().includes((searchTerm || '').toLowerCase())
+  })
 
   const totalPages = Math.ceil(filteredGenders.length / itemsPerPage)
   const paginatedGenders = filteredGenders.slice(
@@ -182,7 +183,7 @@ export const GendersPage: React.FC = () => {
                 {paginatedGenders.map((gender) => (
                   <TableRow key={gender.id} className="hover:bg-surface/50 dark:hover:bg-muted/10">
                     <TableCell className="font-medium text-text-base dark:text-white">
-                      {gender.name}
+                      {gender?.name || (gender as any)?.name_gender || (gender as any)?.gender_name || 'Sin nombre'}
                     </TableCell>
                     <TableCell>
                       <span
@@ -261,7 +262,7 @@ export const GendersPage: React.FC = () => {
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Se eliminará permanentemente el género{' '}
               <span className="font-semibold text-text-base dark:text-white">
-                {deletingGender?.name}
+                {deletingGender?.name || (deletingGender as any)?.name_gender || ''}
               </span>{' '}
               de la base de datos.
             </AlertDialogDescription>
