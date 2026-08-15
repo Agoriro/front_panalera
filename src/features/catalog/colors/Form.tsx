@@ -7,13 +7,26 @@ import { DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../..
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 import { Button } from '../../../components/ui/button'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Pipette } from 'lucide-react'
 
 interface ColorFormProps {
   color?: Color | null
   onSubmit: (data: ColorInput) => void
   isSubmitting: boolean
 }
+
+const PRESET_COLORS = [
+  { name: 'Blanco', hex: '#FFFFFF' },
+  { name: 'Negro', hex: '#1E293B' },
+  { name: 'Rosa Pastel', hex: '#F472B6' },
+  { name: 'Azul Cielo', hex: '#60A5FA' },
+  { name: 'Lila', hex: '#A855F7' },
+  { name: 'Verde Menta', hex: '#4ADE80' },
+  { name: 'Amarillo', hex: '#FACC15' },
+  { name: 'Beige', hex: '#E2D4C9' },
+  { name: 'Gris', hex: '#94A3B8' },
+  { name: 'Rojo', hex: '#EF4444' },
+]
 
 export const ColorForm: React.FC<ColorFormProps> = ({
   color,
@@ -31,7 +44,7 @@ export const ColorForm: React.FC<ColorFormProps> = ({
     resolver: zodResolver(colorSchema),
     defaultValues: {
       name: '',
-      hex_value: '',
+      hex_value: '#9B7DB6',
     },
   })
 
@@ -39,17 +52,27 @@ export const ColorForm: React.FC<ColorFormProps> = ({
     if (color) {
       reset({
         name: color.name || (color as any).name_color || '',
-        hex_value: color.hex_value || (color as any).hex_color || '',
+        hex_value: color.hex_value || (color as any).hex_color || '#9B7DB6',
       })
     } else {
       reset({
         name: '',
-        hex_value: '#9B7DB6', // Default pastel lila
+        hex_value: '#9B7DB6',
       })
     }
   }, [color, reset])
 
   const hexValue = watch('hex_value')
+  const currentName = watch('name')
+  const isValidHex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hexValue || '')
+  const safeHexForPicker = isValidHex && hexValue?.length === 7 ? hexValue : '#9B7DB6'
+
+  const handleSelectPreset = (preset: { name: string; hex: string }) => {
+    setValue('hex_value', preset.hex, { shouldValidate: true })
+    if (!currentName || PRESET_COLORS.some((p) => p.name === currentName)) {
+      setValue('name', preset.name, { shouldValidate: true })
+    }
+  }
 
   return (
     <DialogContent className="sm:max-w-[425px]">
@@ -73,26 +96,58 @@ export const ColorForm: React.FC<ColorFormProps> = ({
           )}
         </div>
 
-        {/* Hex Value */}
+        {/* Hex Value & Color Picker */}
         <div className="space-y-2">
-          <Label htmlFor="hex_value">Código Hexadecimal</Label>
-          <div className="flex gap-3">
+          <Label htmlFor="hex_value">Código de Color</Label>
+          <div className="flex gap-3 items-center">
             <Input
               id="hex_value"
-              placeholder="#E5E4E7"
+              placeholder="#9B7DB6"
               {...register('hex_value')}
               disabled={isSubmitting}
-              className="flex-1 font-mono"
+              className="flex-1 font-mono uppercase"
             />
-            {/* Visual Color Preview */}
-            <div
-              className="h-10 w-10 shrink-0 rounded-lg border border-border-soft shadow-inner transition-colors"
-              style={{ backgroundColor: /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hexValue || '') ? hexValue : '#ccc' }}
-            />
+            
+            {/* Interactive Color Picker Box */}
+            <div 
+              className="relative h-10 w-14 shrink-0 rounded-lg border-2 border-border-soft overflow-hidden shadow-inner cursor-pointer group hover:scale-105 transition-all"
+              title="Click para elegir color"
+            >
+              <input
+                type="color"
+                value={safeHexForPicker}
+                onChange={(e) => setValue('hex_value', e.target.value.toUpperCase(), { shouldValidate: true })}
+                disabled={isSubmitting}
+                className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+              />
+              <div
+                className="h-full w-full flex items-center justify-center transition-colors"
+                style={{ backgroundColor: isValidHex ? hexValue : '#9B7DB6' }}
+              >
+                <Pipette className="h-4 w-4 text-white/80 drop-shadow group-hover:scale-110 transition-transform" />
+              </div>
+            </div>
           </div>
           {errors.hex_value && (
             <p className="text-xs text-danger font-medium">{errors.hex_value.message}</p>
           )}
+
+          {/* Quick presets */}
+          <div className="pt-2">
+            <span className="text-xs text-text-muted font-medium mb-1.5 block">Colores rápidos:</span>
+            <div className="flex flex-wrap gap-1.5">
+              {PRESET_COLORS.map((preset) => (
+                <button
+                  key={preset.hex}
+                  type="button"
+                  onClick={() => handleSelectPreset(preset)}
+                  className="h-6 w-6 rounded-md border border-border-soft shadow-xs transition-transform hover:scale-115 active:scale-95 cursor-pointer"
+                  style={{ backgroundColor: preset.hex }}
+                  title={`${preset.name} (${preset.hex})`}
+                />
+              ))}
+            </div>
+          </div>
         </div>
 
         <DialogFooter className="pt-4">
