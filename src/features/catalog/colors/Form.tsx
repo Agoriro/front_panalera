@@ -67,6 +67,22 @@ export const ColorForm: React.FC<ColorFormProps> = ({
   const isValidHex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hexValue || '')
   const safeHexForPicker = isValidHex && hexValue?.length === 7 ? hexValue : '#9B7DB6'
 
+  const colorInputRef = React.useRef<HTMLInputElement>(null)
+
+  const handleOpenPicker = () => {
+    if (colorInputRef.current) {
+      if ('showPicker' in HTMLInputElement.prototype) {
+        try {
+          colorInputRef.current.showPicker()
+          return
+        } catch {
+          // Fallback to click if showPicker fails
+        }
+      }
+      colorInputRef.current.click()
+    }
+  }
+
   const handleSelectPreset = (preset: { name: string; hex: string }) => {
     setValue('hex_value', preset.hex, { shouldValidate: true })
     if (!currentName || PRESET_COLORS.some((p) => p.name === currentName)) {
@@ -108,25 +124,26 @@ export const ColorForm: React.FC<ColorFormProps> = ({
               className="flex-1 font-mono uppercase"
             />
             
-            {/* Interactive Color Picker Box */}
-            <div 
-              className="relative h-10 w-14 shrink-0 rounded-lg border-2 border-border-soft overflow-hidden shadow-inner cursor-pointer group hover:scale-105 transition-all"
-              title="Click para elegir color"
+            {/* Interactive Color Picker Button */}
+            <button
+              type="button"
+              onClick={handleOpenPicker}
+              disabled={isSubmitting}
+              className="relative h-10 w-14 shrink-0 rounded-lg border-2 border-border-soft overflow-hidden shadow-inner cursor-pointer hover:scale-105 active:scale-95 transition-all flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary"
+              style={{ backgroundColor: isValidHex ? hexValue : '#9B7DB6' }}
+              title="Click para abrir selector de color"
             >
               <input
+                ref={colorInputRef}
                 type="color"
                 value={safeHexForPicker}
                 onChange={(e) => setValue('hex_value', e.target.value.toUpperCase(), { shouldValidate: true })}
                 disabled={isSubmitting}
-                className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+                className="absolute inset-0 h-full w-full opacity-0 pointer-events-none"
+                tabIndex={-1}
               />
-              <div
-                className="h-full w-full flex items-center justify-center transition-colors"
-                style={{ backgroundColor: isValidHex ? hexValue : '#9B7DB6' }}
-              >
-                <Pipette className="h-4 w-4 text-white/80 drop-shadow group-hover:scale-110 transition-transform" />
-              </div>
-            </div>
+              <Pipette className="h-4 w-4 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] pointer-events-none" />
+            </button>
           </div>
           {errors.hex_value && (
             <p className="text-xs text-danger font-medium">{errors.hex_value.message}</p>
