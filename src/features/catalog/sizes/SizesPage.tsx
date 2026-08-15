@@ -174,8 +174,7 @@ export const SizesPage: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="font-display font-semibold">Talla / Etapa</TableHead>
-                  <TableHead className="font-display font-semibold">Estado</TableHead>
+                  <TableHead className="font-display font-semibold">Nombre</TableHead>
                   <TableHead className="text-right font-display font-semibold">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -184,17 +183,6 @@ export const SizesPage: React.FC = () => {
                   <TableRow key={size.id} className="hover:bg-surface/50 dark:hover:bg-muted/10">
                     <TableCell className="font-medium text-text-base dark:text-white">
                       {size?.name || (size as any)?.name_size || (size as any)?.size_name || 'Sin nombre'}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          size.is_active
-                            ? 'bg-secondary/15 text-secondary border border-secondary/25'
-                            : 'bg-danger/15 text-danger border border-danger/25'
-                        }`}
-                      >
-                        {size.is_active ? 'Activa' : 'Inactiva'}
-                      </span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

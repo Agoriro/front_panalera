@@ -32,22 +32,19 @@ export const ColorForm: React.FC<ColorFormProps> = ({
     defaultValues: {
       name: '',
       hex_value: '',
-      is_active: true,
     },
   })
 
   useEffect(() => {
     if (color) {
       reset({
-        name: color.name,
-        hex_value: color.hex_value || '',
-        is_active: color.is_active,
+        name: color.name || (color as any).name_color || '',
+        hex_value: color.hex_value || (color as any).hex_color || '',
       })
     } else {
       reset({
         name: '',
         hex_value: '#9B7DB6', // Default pastel lila
-        is_active: true,
       })
     }
   }, [color, reset])
@@ -90,31 +87,12 @@ export const ColorForm: React.FC<ColorFormProps> = ({
             {/* Visual Color Preview */}
             <div
               className="h-10 w-10 shrink-0 rounded-lg border border-border-soft shadow-inner transition-colors"
-              style={{ backgroundColor: /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hexValue) ? hexValue : '#ccc' }}
+              style={{ backgroundColor: /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hexValue || '') ? hexValue : '#ccc' }}
             />
           </div>
           {errors.hex_value && (
             <p className="text-xs text-danger font-medium">{errors.hex_value.message}</p>
           )}
-        </div>
-
-        {/* Status */}
-        <div className="flex items-center space-x-3 space-y-0 rounded-md border border-border-soft p-4 dark:border-border-soft">
-          <input
-            id="is_active"
-            type="checkbox"
-            className="h-4.5 w-4.5 rounded border-gray-300 text-primary focus:ring-primary dark:border-gray-600 dark:bg-gray-700"
-            {...register('is_active')}
-            disabled={isSubmitting}
-          />
-          <div className="space-y-1 leading-none">
-            <Label htmlFor="is_active" className="cursor-pointer font-medium">
-              Color Activo
-            </Label>
-            <p className="text-xs text-text-muted">
-              Si está inactivo, no podrá ser asignado a nuevos artículos.
-            </p>
-          </div>
         </div>
 
         <DialogFooter className="pt-4">

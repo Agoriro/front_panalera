@@ -29,20 +29,17 @@ export const SizeForm: React.FC<SizeFormProps> = ({
     resolver: zodResolver(sizeSchema),
     defaultValues: {
       name: '',
-      is_active: true,
     },
   })
 
   useEffect(() => {
     if (size) {
       reset({
-        name: size.name,
-        is_active: size.is_active,
+        name: size.name || (size as any).name_size || '',
       })
     } else {
       reset({
         name: '',
-        is_active: true,
       })
     }
   }, [size, reset])
@@ -67,25 +64,6 @@ export const SizeForm: React.FC<SizeFormProps> = ({
           {errors.name && (
             <p className="text-xs text-danger font-medium">{errors.name.message}</p>
           )}
-        </div>
-
-        {/* Status */}
-        <div className="flex items-center space-x-3 space-y-0 rounded-md border border-border-soft p-4 dark:border-border-soft">
-          <input
-            id="is_active"
-            type="checkbox"
-            className="h-4.5 w-4.5 rounded border-gray-300 text-primary focus:ring-primary dark:border-gray-600 dark:bg-gray-700"
-            {...register('is_active')}
-            disabled={isSubmitting}
-          />
-          <div className="space-y-1 leading-none">
-            <Label htmlFor="is_active" className="cursor-pointer font-medium">
-              Talla Activa
-            </Label>
-            <p className="text-xs text-text-muted">
-              Si está inactiva, no podrá ser seleccionada para nuevos artículos.
-            </p>
-          </div>
         </div>
 
         <DialogFooter className="pt-4">

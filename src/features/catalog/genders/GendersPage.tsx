@@ -174,8 +174,7 @@ export const GendersPage: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="font-display font-semibold">Género</TableHead>
-                  <TableHead className="font-display font-semibold">Estado</TableHead>
+                  <TableHead className="font-display font-semibold">Nombre</TableHead>
                   <TableHead className="text-right font-display font-semibold">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -184,17 +183,6 @@ export const GendersPage: React.FC = () => {
                   <TableRow key={gender.id} className="hover:bg-surface/50 dark:hover:bg-muted/10">
                     <TableCell className="font-medium text-text-base dark:text-white">
                       {gender?.name || (gender as any)?.name_gender || (gender as any)?.gender_name || 'Sin nombre'}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          gender.is_active
-                            ? 'bg-secondary/15 text-secondary border border-secondary/25'
-                            : 'bg-danger/15 text-danger border border-danger/25'
-                        }`}
-                      >
-                        {gender.is_active ? 'Activo' : 'Inactivo'}
-                      </span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

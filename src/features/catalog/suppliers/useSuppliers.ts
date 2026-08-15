@@ -38,6 +38,13 @@ export const useSuppliers = () => {
     },
   })
 
+  const toggleMutation = useMutation({
+    mutationFn: (id: string) => toggleSupplierApi(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CATALOG_KEYS.suppliers })
+    },
+  })
+
   return {
     suppliers: query.data || [],
     isLoading: query.isLoading,
@@ -46,6 +53,8 @@ export const useSuppliers = () => {
     isCreating: createMutation.isPending,
     updateSupplier: updateMutation.mutateAsync,
     isUpdating: updateMutation.isPending,
+    toggleSupplier: toggleMutation.mutateAsync,
+    isToggling: toggleMutation.isPending,
     deleteSupplier: deleteMutation.mutateAsync,
     isDeleting: deleteMutation.isPending,
   }

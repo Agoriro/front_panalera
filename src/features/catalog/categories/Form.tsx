@@ -29,20 +29,17 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: '',
-      is_active: true,
     },
   })
 
   useEffect(() => {
     if (category) {
       reset({
-        name: category.name,
-        is_active: category.is_active,
+        name: category.name || (category as any).name_category || '',
       })
     } else {
       reset({
         name: '',
-        is_active: true,
       })
     }
   }, [category, reset])
@@ -67,25 +64,6 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
           {errors.name && (
             <p className="text-xs text-danger font-medium">{errors.name.message}</p>
           )}
-        </div>
-
-        {/* Status */}
-        <div className="flex items-center space-x-3 space-y-0 rounded-md border border-border-soft p-4 dark:border-border-soft">
-          <input
-            id="is_active"
-            type="checkbox"
-            className="h-4.5 w-4.5 rounded border-gray-300 text-primary focus:ring-primary dark:border-gray-600 dark:bg-gray-700"
-            {...register('is_active')}
-            disabled={isSubmitting}
-          />
-          <div className="space-y-1 leading-none">
-            <Label htmlFor="is_active" className="cursor-pointer font-medium">
-              Categoría Activa
-            </Label>
-            <p className="text-xs text-text-muted">
-              Si está inactiva, no podrá ser seleccionada para nuevos artículos.
-            </p>
-          </div>
         </div>
 
         <DialogFooter className="pt-4">

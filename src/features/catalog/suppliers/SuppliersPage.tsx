@@ -36,6 +36,8 @@ export const SuppliersPage: React.FC = () => {
     isCreating,
     updateSupplier,
     isUpdating,
+    toggleSupplier,
+    isToggling,
     deleteSupplier,
   } = useSuppliers()
 
@@ -66,16 +68,25 @@ export const SuppliersPage: React.FC = () => {
   const handleCreateOrUpdate = async (data: SupplierInput) => {
     try {
       if (editingSupplier) {
-        await updateSupplier({ id: editingSupplier.id, body: data })
+        await updateSupplier({ id: editingSupplier.id, body: data as any })
         toast.success('Proveedor actualizado correctamente')
       } else {
-        await createSupplier(data)
+        await createSupplier(data as any)
         toast.success('Proveedor creado correctamente')
       }
       setIsFormOpen(false)
       setEditingSupplier(null)
     } catch (e) {
       toast.error('Ocurrió un error al guardar el proveedor')
+    }
+  }
+
+  const handleToggle = async (supplier: Supplier) => {
+    try {
+      await toggleSupplier(supplier.id)
+      toast.success(`Proveedor ${supplier.is_active ? 'desactivado' : 'activado'} correctamente`)
+    } catch (e) {
+      toast.error('No se pudo cambiar el estado del proveedor')
     }
   }
 
@@ -198,15 +209,20 @@ export const SuppliersPage: React.FC = () => {
                     </TableCell>
                     <TableCell className="text-text-muted">{supplier?.address || 'Sin dirección'}</TableCell>
                     <TableCell>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                      <button
+                        type="button"
+                        onClick={() => handleToggle(supplier)}
+                        disabled={isToggling}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold transition-all cursor-pointer hover:opacity-80 disabled:opacity-50 ${
                           supplier.is_active
                             ? 'bg-secondary/15 text-secondary border border-secondary/25'
                             : 'bg-danger/15 text-danger border border-danger/25'
                         }`}
+                        title="Click para cambiar estado"
                       >
+                        <span className={`h-1.5 w-1.5 rounded-full ${supplier.is_active ? 'bg-secondary' : 'bg-danger'}`} />
                         {supplier.is_active ? 'Activo' : 'Inactivo'}
-                      </span>
+                      </button>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

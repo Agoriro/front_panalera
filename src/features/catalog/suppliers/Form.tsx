@@ -31,22 +31,19 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({
     defaultValues: {
       name_supplier: '',
       address: '',
-      is_active: true,
     },
   })
 
   useEffect(() => {
     if (supplier) {
       reset({
-        name_supplier: supplier.name_supplier,
-        address: supplier.address,
-        is_active: supplier.is_active,
+        name_supplier: supplier.name_supplier || (supplier as any).name || '',
+        address: supplier.address || '',
       })
     } else {
       reset({
         name_supplier: '',
         address: '',
-        is_active: true,
       })
     }
   }, [supplier, reset])
@@ -85,25 +82,6 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({
           {errors.address && (
             <p className="text-xs text-danger font-medium">{errors.address.message}</p>
           )}
-        </div>
-
-        {/* Status */}
-        <div className="flex items-center space-x-3 space-y-0 rounded-md border border-border-soft p-4 dark:border-border-soft">
-          <input
-            id="is_active"
-            type="checkbox"
-            className="h-4.5 w-4.5 rounded border-gray-300 text-primary focus:ring-primary dark:border-gray-600 dark:bg-gray-700"
-            {...register('is_active')}
-            disabled={isSubmitting}
-          />
-          <div className="space-y-1 leading-none">
-            <Label htmlFor="is_active" className="cursor-pointer font-medium">
-              Proveedor Activo
-            </Label>
-            <p className="text-xs text-text-muted">
-              Si está inactivo, no podrá ser seleccionado para nuevos productos o compras.
-            </p>
-          </div>
         </div>
 
         <DialogFooter className="pt-4">

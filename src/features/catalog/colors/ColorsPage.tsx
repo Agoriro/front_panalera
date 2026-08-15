@@ -177,7 +177,6 @@ export const ColorsPage: React.FC = () => {
                 <TableRow>
                   <TableHead className="font-display font-semibold">Nombre</TableHead>
                   <TableHead className="font-display font-semibold">Código Muestra</TableHead>
-                  <TableHead className="font-display font-semibold">Estado</TableHead>
                   <TableHead className="text-right font-display font-semibold">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -197,17 +196,6 @@ export const ColorsPage: React.FC = () => {
                           {color.hex_value || (color as any)?.hex_color || 'N/A'}
                         </span>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          color.is_active
-                            ? 'bg-secondary/15 text-secondary border border-secondary/25'
-                            : 'bg-danger/15 text-danger border border-danger/25'
-                        }`}
-                      >
-                        {color.is_active ? 'Activo' : 'Inactivo'}
-                      </span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

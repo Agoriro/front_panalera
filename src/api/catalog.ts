@@ -25,6 +25,11 @@ export async function updateSupplierApi(id: string, body: Omit<Supplier, 'id'>):
   return res.data
 }
 
+export async function toggleSupplierApi(id: string): Promise<Supplier> {
+  const res = await apiClient.patch<Supplier>(`/catalog/suppliers/${id}/toggle`)
+  return res.data
+}
+
 export async function deleteSupplierApi(id: string): Promise<void> {
   await apiClient.delete(`/catalog/suppliers/${id}`)
 }
