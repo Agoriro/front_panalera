@@ -72,6 +72,9 @@ export const UserForm: React.FC<UserFormProps> = ({ user, roles, onSubmit, isSub
     onSubmit(submitData)
   }
 
+  const selectedRoleId = watch('id_role')
+  const selectedRoleName = roles.find((role) => role.id_role === selectedRoleId)?.name
+
   return (
     <DialogContent className="sm:max-w-[425px]">
       <DialogHeader>
@@ -100,11 +103,11 @@ export const UserForm: React.FC<UserFormProps> = ({ user, roles, onSubmit, isSub
           <Label htmlFor="id_role">Rol asignado</Label>
           <Select
             disabled={isSubmitting}
-            value={watch('id_role')}
+            value={selectedRoleId}
             onValueChange={(val) => setValue('id_role', val, { shouldValidate: true })}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecciona un rol" />
+              <SelectValue>{selectedRoleName || 'Selecciona un rol'}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {roles.map((r) => (

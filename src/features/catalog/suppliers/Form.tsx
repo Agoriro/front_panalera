@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { supplierSchema, SupplierInput } from './schema'
@@ -11,7 +11,7 @@ import { Loader2 } from 'lucide-react'
 
 interface SupplierFormProps {
   supplier?: Supplier | null // If editing
-  onSubmit: (data: SupplierInput) => void
+  onSubmit: (data: SupplierInput) => Promise<void>
   isSubmitting: boolean
 }
 
@@ -20,6 +20,7 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({
   onSubmit,
   isSubmitting,
 }) => {
+  const [preserveDescription, setPreserveDescription] = useState(false)
   const {
     register,
     handleSubmit,
@@ -48,6 +49,11 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({
     }
   }, [supplier, reset])
 
+  const submitForm = async (data: SupplierInput) => {
+    await onSubmit(data)
+    reset({ name_supplier: preserveDescription ? data.name_supplier : '', address: '' })
+  }
+
   return (
     <DialogContent className="sm:max-w-[425px]">
       <DialogHeader>
@@ -55,7 +61,7 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({
           {supplier ? 'Editar Proveedor' : 'Nuevo Proveedor'}
         </DialogTitle>
       </DialogHeader>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
+      <form onSubmit={handleSubmit(submitForm)} className="space-y-4 py-4">
         {/* Name Supplier */}
         <div className="space-y-2">
           <Label htmlFor="name_supplier">Nombre del Proveedor</Label>
@@ -69,6 +75,14 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({
             <p className="text-xs text-danger font-medium">{errors.name_supplier.message}</p>
           )}
         </div>
+
+        {!supplier && (
+          <label className="flex min-h-10 cursor-pointer items-center gap-3 rounded-lg border border-border bg-muted/35 px-3 text-sm">
+            <input type="checkbox" checked={preserveDescription} onChange={(event) => setPreserveDescription(event.target.checked)} disabled={isSubmitting}
+              className="h-4 w-4 rounded border-input accent-primary" />
+            <span>Conservar descripción para el siguiente registro</span>
+          </label>
+        )}
 
         {/* Address */}
         <div className="space-y-2">

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useDropzone } from 'react-dropzone'
 import { inventorySchema, InventoryInput } from './inventorySchema'
 import { InventoryItem } from '../../types/inventory'
 import { Supplier, Category, Color, Size, Gender } from '../../types/catalog'
@@ -9,8 +8,8 @@ import { SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../../c
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Button } from '../../components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
-import { Loader2, UploadCloud, X, ImageIcon, Barcode, Hash } from 'lucide-react'
+import { SearchableSelect } from '../../components/ui/searchable-select'
+import { Loader2, Plus, X, Barcode, Hash } from 'lucide-react'
 
 interface InventoryFormProps {
   item?: InventoryItem | null
@@ -19,7 +18,7 @@ interface InventoryFormProps {
   colors: Color[]
   sizes: Size[]
   genders: Gender[]
-  onSubmit: (data: InventoryInput, photoFiles: File[], deletedPhotoIds: string[]) => Promise<void>
+  onSubmit: (data: InventoryInput, photoUrls: string[], deletedPhotoIds: string[]) => Promise<void>
   isSubmitting: boolean
 }
 
@@ -33,8 +32,9 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
   onSubmit,
   isSubmitting,
 }) => {
-  const [photoFiles, setPhotoFiles] = useState<File[]>([])
-  const [photoPreviews, setPhotoPreviews] = useState<Array<{ id?: string; url: string; file?: File }>>([])
+  const [photoUrls, setPhotoUrls] = useState<string[]>([])
+  const [newPhotoUrl, setNewPhotoUrl] = useState('')
+  const [photoPreviews, setPhotoPreviews] = useState<Array<{ id?: string; url: string }>>([])
   const [deletedPhotoIds, setDeletedPhotoIds] = useState<string[]>([])
 
   const {
@@ -69,7 +69,8 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
 
   useEffect(() => {
     setDeletedPhotoIds([])
-    setPhotoFiles([])
+    setPhotoUrls([])
+    setNewPhotoUrl('')
     if (item) {
       reset({
         description: item.description,
@@ -102,24 +103,20 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
     }
   }, [item, reset])
 
-  // Dropzone Setup for Multiple Photos
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.webp'],
-    },
-    onDrop: (acceptedFiles) => {
-      const newFiles = [...photoFiles, ...acceptedFiles]
-      setPhotoFiles(newFiles)
-
-      acceptedFiles.forEach((file) => {
-        const reader = new FileReader()
-        reader.onloadend = () => {
-          setPhotoPreviews((prev) => [...prev, { url: reader.result as string, file }])
-        }
-        reader.readAsDataURL(file)
-      })
-    },
-  })
+  const addPhotoUrl = () => {
+    const url = newPhotoUrl.trim()
+    if (!url || photoPreviews.length >= 10) return
+    try {
+      const parsed = new URL(url)
+      if (!['http:', 'https:'].includes(parsed.protocol) || url.length > 2048) return
+    } catch {
+      return
+    }
+    if (photoPreviews.some((photo) => photo.url === url)) return
+    setPhotoUrls((prev) => [...prev, url])
+    setPhotoPreviews((prev) => [...prev, { url }])
+    setNewPhotoUrl('')
+  }
 
   const removePhoto = (index: number, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -128,16 +125,15 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
     if (target.id) {
       // It is an existing photo in the database
       setDeletedPhotoIds((prev) => [...prev, target.id!])
-    } else if (target.file) {
-      // It is a newly added file
-      setPhotoFiles((prev) => prev.filter((f) => f !== target.file))
+    } else {
+      setPhotoUrls((prev) => prev.filter((url) => url !== target.url))
     }
 
     setPhotoPreviews((prev) => prev.filter((_, i) => i !== index))
   }
 
   const handleFormSubmit = async (data: InventoryInput) => {
-    await onSubmit(data, photoFiles, deletedPhotoIds)
+    await onSubmit(data, photoUrls, deletedPhotoIds)
   }
 
   return (
@@ -204,22 +200,10 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
         {/* Supplier Selector */}
         <div className="space-y-2">
           <Label htmlFor="id_supplier">Proveedor</Label>
-          <Select
-            disabled={isSubmitting}
-            value={selectedSupplier}
+          <SearchableSelect id="id_supplier" disabled={isSubmitting} value={selectedSupplier}
             onValueChange={(val) => setValue('id_supplier', val, { shouldValidate: true })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecciona un proveedor" />
-            </SelectTrigger>
-            <SelectContent>
-              {suppliers.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name_supplier}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={suppliers.filter((item) => item.id).map((item) => ({ value: item.id, label: item.name_supplier }))}
+            placeholder="Selecciona un proveedor" searchPlaceholder="Buscar proveedor..." />
           {errors.id_supplier && (
             <p className="text-xs text-danger font-medium">{errors.id_supplier.message}</p>
           )}
@@ -228,22 +212,10 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
         {/* Category Selector */}
         <div className="space-y-2">
           <Label htmlFor="id_category">Categoría</Label>
-          <Select
-            disabled={isSubmitting}
-            value={selectedCategory}
+          <SearchableSelect id="id_category" disabled={isSubmitting} value={selectedCategory}
             onValueChange={(val) => setValue('id_category', val, { shouldValidate: true })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecciona una categoría" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={categories.filter((item) => item.id).map((item) => ({ value: item.id, label: item.name }))}
+            placeholder="Selecciona una categoría" searchPlaceholder="Buscar categoría..." />
           {errors.id_category && (
             <p className="text-xs text-danger font-medium">{errors.id_category.message}</p>
           )}
@@ -253,30 +225,10 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="id_color">Color</Label>
-            <Select
-              disabled={isSubmitting}
-              value={selectedColor}
+            <SearchableSelect id="id_color" disabled={isSubmitting} value={selectedColor}
               onValueChange={(val) => setValue('id_color', val, { shouldValidate: true })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Color" />
-              </SelectTrigger>
-              <SelectContent>
-                {colors.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    <div className="flex items-center gap-1.5">
-                      {c.hex_value && (
-                        <span
-                          className="h-3 w-3 rounded-full border border-black/10"
-                          style={{ backgroundColor: c.hex_value }}
-                        />
-                      )}
-                      <span>{c.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={colors.filter((item) => item.id).map((item) => ({ value: item.id, label: item.name, color: item.hex_value || item.hex_color }))}
+              placeholder="Color" searchPlaceholder="Buscar color..." />
             {errors.id_color && (
               <p className="text-xs text-danger font-medium">{errors.id_color.message}</p>
             )}
@@ -284,22 +236,10 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="id_size">Talla / Etapa</Label>
-            <Select
-              disabled={isSubmitting}
-              value={selectedSize}
+            <SearchableSelect id="id_size" disabled={isSubmitting} value={selectedSize}
               onValueChange={(val) => setValue('id_size', val, { shouldValidate: true })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Talla" />
-              </SelectTrigger>
-              <SelectContent>
-                {sizes.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={sizes.filter((item) => item.id).map((item) => ({ value: item.id, label: item.name }))}
+              placeholder="Talla" searchPlaceholder="Buscar talla..." />
             {errors.id_size && (
               <p className="text-xs text-danger font-medium">{errors.id_size.message}</p>
             )}
@@ -308,23 +248,11 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="id_gender">Género</Label>
-            <Select
-              disabled={isSubmitting}
-              value={selectedGender}
+            <Label htmlFor="id_gender" className="min-h-8 items-end">Género</Label>
+            <SearchableSelect id="id_gender" disabled={isSubmitting} value={selectedGender}
               onValueChange={(val) => setValue('id_gender', val, { shouldValidate: true })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Género" />
-              </SelectTrigger>
-              <SelectContent>
-                {genders.map((g) => (
-                  <SelectItem key={g.id} value={g.id}>
-                    {g.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={genders.filter((item) => item.id).map((item) => ({ value: item.id, label: item.name }))}
+              placeholder="Género" searchPlaceholder="Buscar género..." />
             {errors.id_gender && (
               <p className="text-xs text-danger font-medium">{errors.id_gender.message}</p>
             )}
@@ -332,7 +260,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
 
           {/* Utility % */}
           <div className="space-y-2">
-            <Label htmlFor="utility">Porcentaje de Utilidad (%)</Label>
+            <Label htmlFor="utility" className="min-h-8 items-end leading-tight">Porcentaje de Utilidad (%)</Label>
             <Input
               id="utility"
               type="number"
@@ -350,23 +278,24 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
         {/* React Dropzone Image Uploader */}
         <div className="space-y-2">
           <Label>Fotos del Artículo</Label>
-          <div
-            {...getRootProps()}
-            className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors ${
-              isDragActive
-                ? 'border-primary bg-primary/5'
-                : 'border-border-soft hover:border-primary/50 dark:border-border-soft'
-            }`}
-          >
-            <input {...getInputProps()} />
-            <div className="text-center py-2 space-y-2 text-text-muted">
-              <UploadCloud className="mx-auto h-8 w-8 text-text-muted/60" />
-              <div className="text-xs">
-                <span className="font-semibold text-primary">Haz click para subir</span> o arrastra fotos
-              </div>
-              <p className="text-[10px]">PNG, JPG, JPEG o WEBP (Máx. 5MB por foto)</p>
-            </div>
+          <div className="flex gap-2">
+            <Input
+              type="url"
+              maxLength={2048}
+              value={newPhotoUrl}
+              onChange={(event) => setNewPhotoUrl(event.target.value)}
+              placeholder="https://cdn.ejemplo.com/producto.webp"
+              disabled={isSubmitting || photoPreviews.length >= 10}
+            />
+            <Button type="button" variant="outline" size="icon" onClick={addPhotoUrl}
+              disabled={isSubmitting || !newPhotoUrl.trim() || photoPreviews.length >= 10}
+              aria-label="Agregar URL de foto">
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
+          <p className="text-[10px] text-text-muted">
+            URLs HTTP/HTTPS. {photoPreviews.length}/10 fotos agregadas.
+          </p>
 
           {/* Previews Grid */}
           {photoPreviews.length > 0 && (

@@ -30,9 +30,11 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { useDebounce } from '../../hooks/useDebounce'
 import { Plus, Search, Edit2, Trash2, LayoutGrid, List, PackageOpen } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatCurrency } from '../../lib/utils'
+import { formatCurrency, handleApiError } from '../../lib/utils'
+import { useAuthStore } from '../../stores/authStore'
 
 export const InventoryPage: React.FC = () => {
+  const canWrite = useAuthStore((state) => state.role !== 'Consulta')
   // Layout View Mode (grid or table)
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
 
@@ -109,18 +111,9 @@ export const InventoryPage: React.FC = () => {
     setIsFormOpen(true)
   }
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.readAsDataURL(file)
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = (err) => reject(err)
-    })
-  }
-
   const handleCreateOrUpdate = async (
     data: InventoryInput,
-    photoFiles: File[],
+    photoUrls: string[],
     deletedPhotoIds: string[]
   ) => {
     setIsSaving(true)
@@ -142,17 +135,16 @@ export const InventoryPage: React.FC = () => {
       }
 
       // Upload new photos if any
-      if (photoFiles.length > 0 && savedItem?.id) {
+      if (photoUrls.length > 0 && savedItem?.id) {
         toast.info('Subiendo fotos del artículo...')
-        const base64Urls = await Promise.all(photoFiles.map(fileToBase64))
-        await uploadPhotos({ id: savedItem.id, urls: base64Urls })
+        await uploadPhotos({ id: savedItem.id, urls: photoUrls })
         toast.success('Fotos cargadas exitosamente')
       }
 
       setIsFormOpen(false)
       setEditingItem(null)
     } catch (e) {
-      toast.error('Ocurrió un error al guardar el artículo')
+      handleApiError(e)
     } finally {
       setIsSaving(false)
     }
@@ -186,7 +178,7 @@ export const InventoryPage: React.FC = () => {
           </p>
         </div>
 
-        <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
+        {canWrite && <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
           <Button onClick={handleOpenCreate} className="font-display font-medium text-sm gap-2">
             <Plus className="h-4.5 w-4.5" />
             Nuevo Artículo
@@ -201,7 +193,7 @@ export const InventoryPage: React.FC = () => {
             onSubmit={handleCreateOrUpdate}
             isSubmitting={isSaving}
           />
-        </Sheet>
+        </Sheet>}
       </div>
 
       {/* Filters and View Toggles */}
@@ -316,8 +308,8 @@ export const InventoryPage: React.FC = () => {
                 <InventoryCard
                   key={item.id}
                   item={item}
-                  onEdit={handleOpenEdit}
-                  onDelete={setDeletingItem}
+                  onEdit={canWrite ? handleOpenEdit : undefined}
+                  onDelete={canWrite ? setDeletingItem : undefined}
                 />
               ))}
             </div>
@@ -388,7 +380,7 @@ export const InventoryPage: React.FC = () => {
                         {formatCurrency(salePrice)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        {canWrite && <div className="flex justify-end gap-2">
                           <Button
                             variant="ghost"
                             size="icon-sm"
@@ -405,7 +397,7 @@ export const InventoryPage: React.FC = () => {
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
-                        </div>
+                        </div>}
                       </TableCell>
                     </TableRow>
                   )

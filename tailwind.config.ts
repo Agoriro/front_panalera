@@ -9,19 +9,19 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#9B7DB6',
-          dark: '#7A5F99',
+          DEFAULT: '#8A0BD2',
+          dark: '#5B0672',
         },
-        secondary: '#7CC4A4',
-        accent: '#F4A97F',
+        secondary: '#5B0672',
+        accent: '#D980F9',
         surface: {
-          DEFAULT: '#FAFAF8',
+          DEFAULT: '#FBF9FD',
           card: '#FFFFFF',
         },
-        'text-base': '#2D2D3A',
-        'text-muted': '#6B6B7B',
-        'border-soft': '#E8E4F0',
-        danger: '#E05252',
+        'text-base': '#2B1733',
+        'text-muted': '#68566F',
+        'border-soft': '#E2CEF6',
+        danger: '#C63F4F',
       },
       fontFamily: {
         display: ['"Plus Jakarta Sans"', 'sans-serif'],

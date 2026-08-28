@@ -6,13 +6,15 @@ import { z } from 'zod'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
+import { SearchableSelect } from '../../components/ui/searchable-select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card'
 import { Skeleton } from '../../components/ui/skeleton'
-import { Loader2, Plus, ShoppingBag, TrendingUp } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, Plus, ShoppingBag, TrendingUp } from 'lucide-react'
 import { formatCurrency, formatDate, handleApiError } from '../../lib/utils'
 import { toast } from 'sonner'
+import { useDebounce } from '../../hooks/useDebounce'
+import type { Movement } from '../../types/movement'
 
 // Zod Validation Schema
 const purchaseSchema = z.object({
@@ -23,16 +25,25 @@ const purchaseSchema = z.object({
 })
 
 type PurchaseInput = z.infer<typeof purchaseSchema>
+type PurchaseSortKey = 'article' | 'supplier' | 'date' | 'quantity' | 'unitCost' | 'total'
+type SortDirection = 'asc' | 'desc'
 
 export const PurchasePage: React.FC = () => {
+  const [inventorySearch, setInventorySearch] = useState('')
+  const [registeredPurchases, setRegisteredPurchases] = useState<Movement[]>([])
+  const [sort, setSort] = useState<{ key: PurchaseSortKey; direction: SortDirection }>({
+    key: 'date',
+    direction: 'desc',
+  })
+  const debouncedInventorySearch = useDebounce(inventorySearch, 300)
   const {
     movements,
     isLoadingMovements,
     inventory,
     suppliers,
-    createMovement,
+    createPurchase,
     isRegistering,
-  } = useMovements()
+  } = useMovements(debouncedInventorySearch)
 
   // react-hook-form
   const {
@@ -61,19 +72,64 @@ export const PurchasePage: React.FC = () => {
   const calculatedSalePrice = watchedValue * (1 + utilityPercent / 100)
 
   // Filter movements for BUY purchases only
-  const purchaseMovements = movements
-    .filter((m) => m.type_movement === 'BUY')
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  const movementById = new Map<string, Movement>()
+  movements.forEach((movement) => movementById.set(movement.id, movement))
+  registeredPurchases.forEach((movement) => movementById.set(movement.id, movement))
+
+  const purchaseMovements = Array.from(movementById.values())
+    .filter((movement) => movement.type_movement === 'BUY')
+    .sort((a, b) => {
+      const values: Record<PurchaseSortKey, [string | number, string | number]> = {
+        article: [a.inventory?.description || '', b.inventory?.description || ''],
+        supplier: [a.supplier?.name_supplier || '', b.supplier?.name_supplier || ''],
+        date: [new Date(a.created_at).getTime(), new Date(b.created_at).getTime()],
+        quantity: [a.quantity, b.quantity],
+        unitCost: [Number(a.value), Number(b.value)],
+        total: [a.quantity * Number(a.value), b.quantity * Number(b.value)],
+      }
+      const [left, right] = values[sort.key]
+      const comparison = typeof left === 'string'
+        ? left.localeCompare(String(right), 'es', { sensitivity: 'base' })
+        : left - Number(right)
+      return sort.direction === 'asc' ? comparison : -comparison
+    })
+
+  const changeSort = (key: PurchaseSortKey) => {
+    setSort((current) => ({
+      key,
+      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc',
+    }))
+  }
+
+  const SortableHeader = ({ column, children }: { column: PurchaseSortKey; children: React.ReactNode }) => {
+    const Icon = sort.key !== column ? ArrowUpDown : sort.direction === 'asc' ? ArrowUp : ArrowDown
+    return (
+      <button
+        type="button"
+        onClick={() => changeSort(column)}
+        className="flex w-full items-center gap-1.5 text-left transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        aria-label={`Ordenar por ${String(children)}`}
+      >
+        <span>{children}</span>
+        <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      </button>
+    )
+  }
 
   const onSubmit = async (data: PurchaseInput) => {
     try {
-      await createMovement({
+      const createdPurchase = await createPurchase({
         id_inventory: data.id_inventory,
-        type_movement: 'BUY',
         id_supplier: data.id_supplier,
         quantity: data.quantity,
         value: data.value,
       })
+      setRegisteredPurchases((current) => [{
+        ...createdPurchase,
+        type_movement: 'BUY',
+        inventory: inventory.find((item) => item.id === data.id_inventory),
+        supplier: suppliers.find((supplier) => supplier.id === data.id_supplier),
+      }, ...current.filter((movement) => movement.id !== createdPurchase.id)])
       toast.success('Compra registrada y stock actualizado')
       reset({
         id_inventory: '',
@@ -112,8 +168,10 @@ export const PurchasePage: React.FC = () => {
               {/* Product */}
               <div className="space-y-2">
                 <Label htmlFor="id_inventory">Artículo</Label>
-                <Select
+                <SearchableSelect
+                  id="id_inventory"
                   value={watchedInventoryId}
+                  onSearchChange={setInventorySearch}
                   onValueChange={(val) => {
                     setValue('id_inventory', val, { shouldValidate: true })
                     // Auto-fill default supplier if associated
@@ -122,19 +180,26 @@ export const PurchasePage: React.FC = () => {
                       setValue('id_supplier', prod.id_supplier, { shouldValidate: true })
                     }
                   }}
+                  options={inventory.map((item) => ({
+                    value: item.id,
+                    label: `${item.code_inventory ? `[${item.code_inventory}] ` : ''}${item.description}`,
+                    keywords: item.barcode_inventory || '',
+                  }))}
+                  placeholder="Busca por código, descripción o código de barras"
+                  searchPlaceholder="Código, descripción o código de barras..."
+                  emptyMessage="No se encontraron artículos."
                   disabled={isRegistering}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un artículo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {inventory.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.code_inventory ? `[${item.code_inventory}] ` : ''}{item.description} ({item.size?.name || 'S/T'})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
+                {selectedProduct && (
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs">
+                    <p className="font-semibold text-text-base dark:text-white">
+                      {selectedProduct.code_inventory || 'Sin código'} · {selectedProduct.description}
+                    </p>
+                    <p className="mt-1 text-text-muted">
+                      Proveedor: {selectedProduct.supplier?.name_supplier || 'Sin proveedor asociado'}
+                    </p>
+                  </div>
+                )}
                 {errors.id_inventory && (
                   <p className="text-xs text-danger font-medium">{errors.id_inventory.message}</p>
                 )}
@@ -143,22 +208,19 @@ export const PurchasePage: React.FC = () => {
               {/* Supplier */}
               <div className="space-y-2">
                 <Label htmlFor="id_supplier">Proveedor</Label>
-                <Select
+                <SearchableSelect
+                  id="id_supplier"
                   value={watch('id_supplier')}
                   onValueChange={(val) => setValue('id_supplier', val, { shouldValidate: true })}
+                  options={suppliers.map((supplier) => ({
+                    value: supplier.id,
+                    label: supplier.name_supplier,
+                  }))}
+                  placeholder="Selecciona un proveedor"
+                  searchPlaceholder="Buscar proveedor..."
+                  emptyMessage="No se encontraron proveedores."
                   disabled={isRegistering}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un proveedor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name_supplier}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
                 {errors.id_supplier && (
                   <p className="text-xs text-danger font-medium">{errors.id_supplier.message}</p>
                 )}
@@ -251,17 +313,17 @@ export const PurchasePage: React.FC = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="font-display font-semibold">Artículo</TableHead>
-                      <TableHead className="font-display font-semibold">Proveedor</TableHead>
-                      <TableHead className="font-display font-semibold">Fecha</TableHead>
-                      <TableHead className="font-display font-semibold">Cant.</TableHead>
-                      <TableHead className="font-display font-semibold">Costo Unit.</TableHead>
-                      <TableHead className="font-display font-semibold">Total</TableHead>
+                      <TableHead className="font-display font-semibold"><SortableHeader column="article">Artículo</SortableHeader></TableHead>
+                      <TableHead className="font-display font-semibold"><SortableHeader column="supplier">Proveedor</SortableHeader></TableHead>
+                      <TableHead className="font-display font-semibold"><SortableHeader column="date">Fecha</SortableHeader></TableHead>
+                      <TableHead className="font-display font-semibold"><SortableHeader column="quantity">Cant.</SortableHeader></TableHead>
+                      <TableHead className="font-display font-semibold"><SortableHeader column="unitCost">Costo Unit.</SortableHeader></TableHead>
+                      <TableHead className="font-display font-semibold"><SortableHeader column="total">Total</SortableHeader></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {purchaseMovements.map((move) => {
-                      const totalCost = move.quantity * move.value
+                      const totalCost = move.quantity * Number(move.value)
                       return (
                         <TableRow key={move.id}>
                           <TableCell className="font-medium text-text-base dark:text-white max-w-[150px] truncate">
@@ -272,7 +334,7 @@ export const PurchasePage: React.FC = () => {
                           </TableCell>
                           <TableCell className="text-xs">{formatDate(move.created_at)}</TableCell>
                           <TableCell>{move.quantity} uds</TableCell>
-                          <TableCell className="font-mono text-xs">{formatCurrency(move.value)}</TableCell>
+                          <TableCell className="font-mono text-xs">{formatCurrency(Number(move.value))}</TableCell>
                           <TableCell className="font-mono font-semibold">{formatCurrency(totalCost)}</TableCell>
                         </TableRow>
                       )

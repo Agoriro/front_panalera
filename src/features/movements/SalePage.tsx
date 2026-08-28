@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useMovements } from './useMovements'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -6,30 +6,40 @@ import { z } from 'zod'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
+import { SearchableSelect } from '../../components/ui/searchable-select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card'
-import { Loader2, Plus, ShoppingCart, Info, AlertTriangle } from 'lucide-react'
+import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, Info, Loader2, Plus, ShoppingCart } from 'lucide-react'
 import { formatCurrency, formatDate, handleApiError } from '../../lib/utils'
 import { toast } from 'sonner'
+import { Skeleton } from '../../components/ui/skeleton'
+import { useDebounce } from '../../hooks/useDebounce'
 
 // Zod Validation Schema
 const saleSchema = z.object({
   id_inventory: z.string().uuid('Debes seleccionar un artículo del inventario'),
   quantity: z.coerce.number().int().min(1, 'La cantidad debe ser de al menos 1 unidad'),
-  value: z.coerce.number().min(1, 'El precio de venta debe ser mayor a 0'),
+  value: z.coerce.number().positive('El precio de venta debe ser mayor a 0'),
 })
 
 type SaleInput = z.infer<typeof saleSchema>
+type SaleSortKey = 'article' | 'date' | 'quantity' | 'unitPrice' | 'total'
+type SortDirection = 'asc' | 'desc'
 
 export const SalePage: React.FC = () => {
+  const [inventorySearch, setInventorySearch] = useState('')
+  const [sort, setSort] = useState<{ key: SaleSortKey; direction: SortDirection }>({
+    key: 'date',
+    direction: 'desc',
+  })
+  const debouncedInventorySearch = useDebounce(inventorySearch, 300)
   const {
     movements,
     isLoadingMovements,
     inventory,
-    createMovement,
+    createSale,
     isRegistering,
-  } = useMovements()
+  } = useMovements(debouncedInventorySearch)
 
   const {
     register,
@@ -48,16 +58,13 @@ export const SalePage: React.FC = () => {
   })
 
   const watchedInventoryId = watch('id_inventory')
+  const watchedQuantity = watch('quantity') || 0
   const selectedProduct = inventory.find((i) => i.id === watchedInventoryId)
-
-  // Auto-fill price when product changes
-  useEffect(() => {
-    if (selectedProduct) {
-      const cost = selectedProduct.cost_price || 0
-      const defaultSalePrice = cost * (1 + selectedProduct.utility / 100)
-      setValue('value', Math.round(defaultSalePrice))
-    }
-  }, [selectedProduct, setValue])
+  const suggestedPrice = selectedProduct
+    ? Math.round((selectedProduct.cost_price || 0) * (1 + selectedProduct.utility / 100))
+    : 0
+  const watchedValue = watch('value') || 0
+  const isBelowSuggested = Boolean(selectedProduct && suggestedPrice > 0 && watchedValue < suggestedPrice)
 
   // Filter today's sales movements
   const todaySales = movements
@@ -67,7 +74,42 @@ export const SalePage: React.FC = () => {
       const todayDate = new Date().toDateString()
       return mDate === todayDate
     })
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .sort((a, b) => {
+      const values: Record<SaleSortKey, [string | number, string | number]> = {
+        article: [a.inventory?.description || '', b.inventory?.description || ''],
+        date: [new Date(a.created_at).getTime(), new Date(b.created_at).getTime()],
+        quantity: [a.quantity, b.quantity],
+        unitPrice: [Number(a.value), Number(b.value)],
+        total: [a.quantity * Number(a.value), b.quantity * Number(b.value)],
+      }
+      const [left, right] = values[sort.key]
+      const comparison = typeof left === 'string'
+        ? left.localeCompare(String(right), 'es', { sensitivity: 'base' })
+        : left - Number(right)
+      return sort.direction === 'asc' ? comparison : -comparison
+    })
+
+  const changeSort = (key: SaleSortKey) => {
+    setSort((current) => ({
+      key,
+      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc',
+    }))
+  }
+
+  const SortableHeader = ({ column, children }: { column: SaleSortKey; children: React.ReactNode }) => {
+    const Icon = sort.key !== column ? ArrowUpDown : sort.direction === 'asc' ? ArrowUp : ArrowDown
+    return (
+      <button
+        type="button"
+        onClick={() => changeSort(column)}
+        className="flex w-full items-center gap-1.5 text-left transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        aria-label={`Ordenar por ${String(children)}`}
+      >
+        <span>{children}</span>
+        <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      </button>
+    )
+  }
 
   const onSubmit = async (data: SaleInput) => {
     if (selectedProduct && selectedProduct.stock_qty < data.quantity) {
@@ -75,11 +117,14 @@ export const SalePage: React.FC = () => {
       return
     }
 
+    if (data.value < suggestedPrice) {
+      toast.error(`El precio no puede ser inferior al sugerido (${formatCurrency(suggestedPrice)}).`)
+      return
+    }
+
     try {
-      await createMovement({
+      await createSale({
         id_inventory: data.id_inventory,
-        type_movement: 'SELL',
-        id_supplier: null, // Supplier must be null for sales
         quantity: data.quantity,
         value: data.value,
       })
@@ -141,29 +186,35 @@ export const SalePage: React.FC = () => {
               <ShoppingCart className="h-5 w-5 text-secondary" />
               Nueva Venta
             </CardTitle>
-            <CardDescription>Selecciona el producto y registra el valor cobrado.</CardDescription>
+            <CardDescription>Selecciona el producto y ajusta el precio sin bajar del valor sugerido.</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit(onSubmit)}>
             <CardContent className="space-y-4">
               {/* Product selector */}
               <div className="space-y-2">
                 <Label htmlFor="id_inventory">Artículo</Label>
-                <Select
+                <SearchableSelect
+                  id="id_inventory"
                   value={watchedInventoryId}
-                  onValueChange={(val) => setValue('id_inventory', val, { shouldValidate: true })}
+                  onValueChange={(val) => {
+                    const product = inventory.find((item) => item.id === val)
+                    const minimumPrice = product
+                      ? Math.round((product.cost_price || 0) * (1 + product.utility / 100))
+                      : 0
+                    setValue('id_inventory', val, { shouldValidate: true })
+                    setValue('value', minimumPrice, { shouldValidate: true })
+                  }}
+                  onSearchChange={setInventorySearch}
+                  options={inventory.map((item) => ({
+                    value: item.id,
+                    label: `${item.code_inventory ? `[${item.code_inventory}] ` : ''}${item.description} · ${item.stock_qty} uds`,
+                    keywords: item.barcode_inventory || '',
+                  }))}
+                  placeholder="Busca por código, descripción o código de barras"
+                  searchPlaceholder="Código, descripción o código de barras..."
+                  emptyMessage="No se encontraron artículos."
                   disabled={isRegistering}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un artículo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {inventory.map((item) => (
-                      <SelectItem key={item.id} value={item.id} disabled={item.stock_qty === 0}>
-                        {item.code_inventory ? `[${item.code_inventory}] ` : ''}{item.description} ({item.size?.name || 'S/T'}) - Stock: {item.stock_qty}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
                 {errors.id_inventory && (
                   <p className="text-xs text-danger font-medium">{errors.id_inventory.message}</p>
                 )}
@@ -189,26 +240,32 @@ export const SalePage: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="value">Precio Cobrado ($)</Label>
+                  <Label htmlFor="value">Precio de venta ($)</Label>
                   <Input
                     id="value"
                     type="number"
-                    min="0"
-                    disabled={isRegistering}
+                    min={suggestedPrice || 1}
+                    step="1"
+                    disabled={isRegistering || !selectedProduct}
+                    aria-invalid={isBelowSuggested || Boolean(errors.value)}
+                    className="font-mono"
                     {...register('value')}
                   />
-                  {errors.value && (
-                    <p className="text-xs text-danger font-medium">{errors.value.message}</p>
+                  {errors.value && <p className="text-xs font-medium text-danger">{errors.value.message}</p>}
+                  {!errors.value && isBelowSuggested && (
+                    <p className="text-xs font-medium text-danger">
+                      Mínimo permitido: {formatCurrency(suggestedPrice)}
+                    </p>
                   )}
                 </div>
               </div>
 
               {/* Sale Summary Preview */}
-              {watchedInventoryId && watch('quantity') > 0 && watch('value') > 0 && (
+              {watchedInventoryId && watchedQuantity > 0 && watchedValue > 0 && (
                 <div className="rounded-lg bg-secondary/10 border border-secondary/20 p-4 space-y-1 animate-fade-in">
                   <div className="text-xs text-secondary font-semibold">Total a Cobrar</div>
                   <div className="font-mono text-2xl font-bold text-text-base dark:text-white leading-none">
-                    {formatCurrency(watch('quantity') * watch('value'))}
+                    {formatCurrency(watchedQuantity * watchedValue)}
                   </div>
                 </div>
               )}
@@ -216,7 +273,7 @@ export const SalePage: React.FC = () => {
             <div className="p-6 pt-0">
               <Button
                 type="submit"
-                disabled={isRegistering || !selectedProduct || selectedProduct.stock_qty === 0}
+                disabled={isRegistering || !selectedProduct || selectedProduct.stock_qty === 0 || isBelowSuggested}
                 className="w-full font-display font-medium text-sm bg-secondary hover:bg-secondary/90 text-white"
               >
                 {isRegistering ? (
@@ -256,29 +313,25 @@ export const SalePage: React.FC = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="font-display font-semibold">Artículo</TableHead>
-                      <TableHead className="font-display font-semibold">Hora</TableHead>
-                      <TableHead className="font-display font-semibold">Cantidad</TableHead>
-                      <TableHead className="font-display font-semibold">Precio Unit.</TableHead>
-                      <TableHead className="font-display font-semibold">Total Venta</TableHead>
+                      <TableHead className="font-display font-semibold"><SortableHeader column="article">Artículo</SortableHeader></TableHead>
+                      <TableHead className="font-display font-semibold"><SortableHeader column="date">Fecha y hora</SortableHeader></TableHead>
+                      <TableHead className="font-display font-semibold"><SortableHeader column="quantity">Cantidad</SortableHeader></TableHead>
+                      <TableHead className="font-display font-semibold"><SortableHeader column="unitPrice">Precio Unit.</SortableHeader></TableHead>
+                      <TableHead className="font-display font-semibold"><SortableHeader column="total">Total Venta</SortableHeader></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {todaySales.map((move) => {
-                      const totalSale = move.quantity * move.value
+                      const unitPrice = Number(move.value)
+                      const totalSale = move.quantity * unitPrice
                       return (
                         <TableRow key={move.id}>
                           <TableCell className="font-medium text-text-base dark:text-white max-w-[180px] truncate">
                             {move.inventory?.description || 'Artículo N/A'}
                           </TableCell>
-                          <TableCell className="text-xs">
-                            {new Date(move.created_at).toLocaleTimeString('es-CO', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </TableCell>
+                          <TableCell className="text-xs whitespace-nowrap">{formatDate(move.created_at)}</TableCell>
                           <TableCell>{move.quantity} uds</TableCell>
-                          <TableCell className="font-mono text-xs">{formatCurrency(move.value)}</TableCell>
+                          <TableCell className="font-mono text-xs">{formatCurrency(unitPrice)}</TableCell>
                           <TableCell className="font-mono font-semibold text-secondary">{formatCurrency(totalSale)}</TableCell>
                         </TableRow>
                       )

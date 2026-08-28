@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { sizeSchema, SizeInput } from './schema'
@@ -11,7 +11,7 @@ import { Loader2 } from 'lucide-react'
 
 interface SizeFormProps {
   size?: Size | null
-  onSubmit: (data: SizeInput) => void
+  onSubmit: (data: SizeInput) => Promise<void>
   isSubmitting: boolean
 }
 
@@ -20,6 +20,7 @@ export const SizeForm: React.FC<SizeFormProps> = ({
   onSubmit,
   isSubmitting,
 }) => {
+  const [preserveDescription, setPreserveDescription] = useState(false)
   const {
     register,
     handleSubmit,
@@ -44,6 +45,11 @@ export const SizeForm: React.FC<SizeFormProps> = ({
     }
   }, [size, reset])
 
+  const submitForm = async (data: SizeInput) => {
+    await onSubmit(data)
+    if (!preserveDescription) reset({ name: '' })
+  }
+
   return (
     <DialogContent className="sm:max-w-[425px]">
       <DialogHeader>
@@ -51,7 +57,7 @@ export const SizeForm: React.FC<SizeFormProps> = ({
           {size ? 'Editar Talla' : 'Nueva Talla'}
         </DialogTitle>
       </DialogHeader>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
+      <form onSubmit={handleSubmit(submitForm)} className="space-y-4 py-4">
         {/* Name */}
         <div className="space-y-2">
           <Label htmlFor="name">Nombre de la Talla / Etapa</Label>
@@ -65,6 +71,14 @@ export const SizeForm: React.FC<SizeFormProps> = ({
             <p className="text-xs text-danger font-medium">{errors.name.message}</p>
           )}
         </div>
+
+        {!size && (
+          <label className="flex min-h-10 cursor-pointer items-center gap-3 rounded-lg border border-border bg-muted/35 px-3 text-sm">
+            <input type="checkbox" checked={preserveDescription} onChange={(event) => setPreserveDescription(event.target.checked)} disabled={isSubmitting}
+              className="h-4 w-4 rounded border-input accent-primary" />
+            <span>Conservar descripción para el siguiente registro</span>
+          </label>
+        )}
 
         <DialogFooter className="pt-4">
           <Button type="submit" disabled={isSubmitting} className="font-display font-medium text-sm">

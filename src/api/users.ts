@@ -1,12 +1,13 @@
 import apiClient from './client'
 import { User, UserFormInput } from '../types/user'
+import { Page, PageParams } from '../types/pagination'
 
 export const USER_KEYS = {
   all: ['users'] as const,
 }
 
-export async function getUsersApi(): Promise<User[]> {
-  const res = await apiClient.get<User[]>('/users')
+export async function getUsersApi(params?: PageParams): Promise<Page<User>> {
+  const res = await apiClient.get<Page<User>>('/users', { params })
   return res.data
 }
 

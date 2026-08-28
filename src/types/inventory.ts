@@ -1,4 +1,5 @@
 import { Supplier, Category, Color, Size, Gender } from './catalog';
+import { PageParams } from './pagination';
 
 export interface InventoryItem {
   id: string;
@@ -37,9 +38,13 @@ export interface InventoryFormInput {
   photo_url?: string | null;
 }
 
-export interface InventoryQueryParams {
+export interface InventoryQueryParams extends PageParams {
   search?: string;
   code_inventory?: string;
   barcode_inventory?: string;
+  id_category?: string;
+  id_gender?: string;
+  id_color?: string;
+  id_size?: string;
+  is_active?: boolean;
 }
-

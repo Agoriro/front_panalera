@@ -6,6 +6,10 @@ export const ROLE_KEYS = {
 }
 
 export async function getRolesApi(): Promise<Role[]> {
-  const res = await apiClient.get<Role[]>('/roles')
-  return res.data
+  const res = await apiClient.get<any[]>('/roles')
+  return (Array.isArray(res.data) ? res.data : []).map((role) => ({
+    ...role,
+    id_role: role.id_role ?? role.id ?? '',
+    name: role.name ?? role.name_role ?? role.role_name ?? '',
+  }))
 }

@@ -2,6 +2,7 @@
 export interface BasicCatalogItem {
   id: string;
   name: string;
+  is_active?: boolean;
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -43,4 +44,3 @@ export interface Supplier {
   created_at?: string | null;
   updated_at?: string | null;
 }
-

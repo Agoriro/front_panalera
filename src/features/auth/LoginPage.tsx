@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { loginSchema, LoginInput } from './authSchema'
 import { useLogin } from './useLogin'
 import { handleApiError } from '../../lib/utils'
-import { Lock, User, AlertCircle, Loader2 } from 'lucide-react'
+import { Lock, User, AlertCircle, Loader2, Package } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
@@ -53,9 +53,8 @@ export const LoginPage: React.FC = () => {
           const role = payload.role
           if (role === 'Admin') {
             navigate(ROUTES.DASHBOARD)
-          } else {
-            navigate(ROUTES.SALES)
-          }
+          } else if (role === 'Operator') navigate(ROUTES.SALES)
+          else navigate(ROUTES.INVENTORY)
         } catch (e) {
           // Fallback
           navigate('/')
@@ -73,30 +72,36 @@ export const LoginPage: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface dark:bg-[#1A1A24] px-4 transition-colors duration-300">
-      <Card className="w-full max-w-md border-border-soft dark:border-border-soft bg-surface-card dark:bg-card shadow-2xl">
-        <CardHeader className="space-y-3 text-center">
-          {/* Logo container */}
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">
-            {/* Cute Cradle SVG */}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8">
-              <path d="M3 20c4-2 14-2 18 0" />
-              <rect x="5" y="8" width="14" height="9" rx="1.5" />
-              <path d="M8 8v9" />
-              <path d="M12 8v9" />
-              <path d="M16 8v9" />
-              <path d="M5 8c0-3 3-4 6-4" />
-            </svg>
+    <div className="grid min-h-[100dvh] bg-background lg:grid-cols-[1.1fr_0.9fr]">
+      <section className="hidden flex-col justify-between bg-[#5b0672] p-12 text-white lg:flex">
+        <div className="flex items-center gap-3 font-display text-lg font-semibold">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#e2cef6] text-[#5b0672]">
+            <Lock className="h-5 w-5" aria-hidden="true" />
           </div>
-          <CardTitle className="font-display text-2xl font-bold tracking-tight text-text-base dark:text-white">
+          Pañalera Pro
+        </div>
+        <div className="max-w-xl">
+          <p className="font-display text-4xl font-bold leading-tight tracking-[-0.035em]">Control comercial claro. Decisiones con datos confiables.</p>
+          <p className="mt-5 max-w-lg text-base leading-relaxed text-white/65">Inventario, compras, ventas y reportes en un espacio seguro para la operación diaria.</p>
+        </div>
+        <p className="text-xs text-white/45">Gestión interna empresarial</p>
+      </section>
+      <section className="flex items-center justify-center px-5 py-10 sm:px-10">
+      <Card className="w-full max-w-[440px] border-border bg-card shadow-[0_20px_60px_rgb(23_32_51/0.10)]">
+        <CardHeader className="space-y-3 px-6 pt-7 text-left sm:px-8">
+          {/* Logo container */}
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-white shadow-sm">
+            <Package className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <CardTitle className="font-display text-2xl font-bold tracking-[-0.025em] text-foreground">
             Sistema Pañalera
           </CardTitle>
-          <CardDescription className="text-text-muted dark:text-text-muted">
+          <CardDescription className="text-muted-foreground">
             Ingresa tus credenciales para acceder al sistema de gestión
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5 px-6 sm:px-8">
             {/* Cooldown Alert */}
             {cooldown > 0 && (
               <div className="flex items-center gap-2 rounded-lg bg-danger/10 p-3 text-xs font-semibold text-danger border border-danger/20">
@@ -153,10 +158,10 @@ export const LoginPage: React.FC = () => {
               )}
             </div>
           </CardContent>
-          <CardFooter className="pt-2">
+          <CardFooter className="border-0 bg-transparent px-6 pb-7 pt-2 sm:px-8">
             <Button
               type="submit"
-              className="w-full font-display font-medium text-sm h-10 shadow-lg shadow-primary/10"
+              className="h-11 w-full font-display text-sm"
               disabled={loginMutation.isPending || cooldown > 0}
             >
               {loginMutation.isPending ? (
@@ -171,6 +176,7 @@ export const LoginPage: React.FC = () => {
           </CardFooter>
         </form>
       </Card>
+      </section>
     </div>
   )
 }

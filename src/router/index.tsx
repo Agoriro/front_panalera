@@ -28,9 +28,8 @@ const RootRedirect = () => {
 
   if (role === 'Admin') {
     return <Navigate to={ROUTES.DASHBOARD} replace />
-  } else {
-    return <Navigate to={ROUTES.SALES} replace />
   }
+  return <Navigate to={ROUTES.INVENTORY} replace />
 }
 
 export const router = createBrowserRouter([
@@ -56,7 +55,7 @@ export const router = createBrowserRouter([
       {
         path: ROUTES.INVENTORY,
         element: (
-          <ProtectedRoute allowedRoles={['Admin']}>
+          <ProtectedRoute allowedRoles={['Admin', 'Operator', 'Consulta']}>
             <InventoryPage />
           </ProtectedRoute>
         ),
@@ -104,7 +103,7 @@ export const router = createBrowserRouter([
       {
         path: ROUTES.PURCHASES,
         element: (
-          <ProtectedRoute allowedRoles={['Admin']}>
+          <ProtectedRoute allowedRoles={['Admin', 'Operator']}>
             <PurchasePage />
           </ProtectedRoute>
         ),
@@ -112,7 +111,7 @@ export const router = createBrowserRouter([
       {
         path: ROUTES.SALES,
         element: (
-          <ProtectedRoute allowedRoles={['Admin', 'Vendedor']}>
+          <ProtectedRoute allowedRoles={['Admin', 'Operator']}>
             <SalePage />
           </ProtectedRoute>
         ),
@@ -120,7 +119,7 @@ export const router = createBrowserRouter([
       {
         path: ROUTES.REPORTS,
         element: (
-          <ProtectedRoute allowedRoles={['Admin']}>
+          <ProtectedRoute allowedRoles={['Admin', 'Operator', 'Consulta']}>
             <SalesReportPage />
           </ProtectedRoute>
         ),

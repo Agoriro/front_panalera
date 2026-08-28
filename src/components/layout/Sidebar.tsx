@@ -14,19 +14,30 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Truck,
+  Tags,
+  Palette,
+  Ruler,
+  UsersRound,
 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { getRolesApi, ROLE_KEYS } from '../../api/roles'
 
 export const Sidebar: React.FC = () => {
   const { role, sidebarOpen, toggleSidebar, logout, user } = useAuthStore()
   const location = useLocation()
+  const { data: roles = [] } = useQuery({ queryKey: ROLE_KEYS.all, queryFn: getRolesApi })
+  const displayRole = roles.find((item) => item.id_role === role)?.name || role || 'Sin rol'
+  const displayName = user?.username && !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(user.username)
+    ? user.username
+    : 'Usuario'
 
   const handleLogout = () => {
     logout()
   }
 
   // Define menu items based on role
-  const menuItems = role === 'Admin'
-    ? [
+  const adminItems = [
         { path: ROUTES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
         { path: ROUTES.INVENTORY, label: 'Inventario', icon: Package },
         {
@@ -34,11 +45,11 @@ export const Sidebar: React.FC = () => {
           icon: FolderOpen,
           isHeader: true,
         },
-        { path: ROUTES.CATALOGS.SUPPLIERS, label: 'Proveedores', icon: FolderOpen, isSub: true },
-        { path: ROUTES.CATALOGS.CATEGORIES, label: 'Categorías', icon: FolderOpen, isSub: true },
-        { path: ROUTES.CATALOGS.COLORS, label: 'Colores', icon: FolderOpen, isSub: true },
-        { path: ROUTES.CATALOGS.SIZES, label: 'Tallas', icon: FolderOpen, isSub: true },
-        { path: ROUTES.CATALOGS.GENDERS, label: 'Géneros', icon: FolderOpen, isSub: true },
+        { path: ROUTES.CATALOGS.SUPPLIERS, label: 'Proveedores', icon: Truck, isSub: true },
+        { path: ROUTES.CATALOGS.CATEGORIES, label: 'Categorías', icon: Tags, isSub: true },
+        { path: ROUTES.CATALOGS.COLORS, label: 'Colores', icon: Palette, isSub: true },
+        { path: ROUTES.CATALOGS.SIZES, label: 'Tallas', icon: Ruler, isSub: true },
+        { path: ROUTES.CATALOGS.GENDERS, label: 'Géneros', icon: UsersRound, isSub: true },
         {
           label: 'Operaciones',
           icon: ShoppingBag,
@@ -49,26 +60,26 @@ export const Sidebar: React.FC = () => {
         { path: ROUTES.REPORTS, label: 'Reportes', icon: BarChart3 },
         { path: ROUTES.USERS, label: 'Usuarios', icon: Users },
       ]
-    : [
-        { path: ROUTES.SALES, label: 'Ventas', icon: ShoppingCart },
-      ]
+  const operatorItems = [
+    { path: ROUTES.INVENTORY, label: 'Inventario', icon: Package },
+    { path: ROUTES.PURCHASES, label: 'Compras', icon: ShoppingBag },
+    { path: ROUTES.SALES, label: 'Ventas', icon: ShoppingCart },
+    { path: ROUTES.REPORTS, label: 'Reportes', icon: BarChart3 },
+  ]
+  const consultationItems = [
+    { path: ROUTES.INVENTORY, label: 'Inventario', icon: Package },
+    { path: ROUTES.REPORTS, label: 'Reportes', icon: BarChart3 },
+  ]
+  const menuItems = displayRole === 'Admin' ? adminItems : displayRole === 'Operator' ? operatorItems : consultationItems
 
   const SidebarLogo = () => (
-    <div className="flex items-center gap-3 px-4 py-6 border-b border-white/10">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20 text-white shadow-inner">
-        {/* Cute Baby Cradle SVG */}
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-          <path d="M3 20c4-2 14-2 18 0" />
-          <rect x="5" y="8" width="14" height="9" rx="1.5" />
-          <path d="M8 8v9" />
-          <path d="M12 8v9" />
-          <path d="M16 8v9" />
-          <path d="M5 8c0-3 3-4 6-4" />
-        </svg>
+    <div className="flex h-16 items-center gap-3 border-b border-white/10 px-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#e2cef6] text-[#5b0672] shadow-sm">
+        <Package className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />
       </div>
       {sidebarOpen && (
         <span className="font-display font-semibold text-lg text-white tracking-wide truncate">
-          Pañalera
+          Pañalera <span className="text-white/55">Pro</span>
         </span>
       )}
     </div>
@@ -77,20 +88,20 @@ export const Sidebar: React.FC = () => {
   return (
     <TooltipProvider delayDuration={100}>
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-40 flex flex-col bg-primary dark:bg-[#1E1B2E] transition-all duration-300 shadow-xl ${
-          sidebarOpen ? 'w-64' : 'w-20'
+        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-white/10 bg-[#5b0672] text-white transition-[width] duration-200 ${
+          sidebarOpen ? 'w-64' : 'w-[4.5rem]'
         }`}
       >
         <SidebarLogo />
 
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-thin scrollbar-thumb-white/10">
+        <div className="flex-1 overflow-y-auto px-2.5 py-4 space-y-1 scrollbar-thin scrollbar-thumb-white/10">
           {menuItems.map((item, index) => {
             if (item.isHeader) {
               if (!sidebarOpen) return <div key={index} className="h-px bg-white/10 my-4" />
               return (
                 <div
                   key={index}
-                  className="px-3 pt-4 pb-1 text-xs font-display font-medium text-white/50 uppercase tracking-wider"
+                  className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/45"
                 >
                   {item.label}
                 </div>
@@ -104,10 +115,10 @@ export const Sidebar: React.FC = () => {
               <NavLink
                 to={item.path!}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                  `flex min-h-10 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${
                     isActive
-                      ? 'bg-primary-dark text-white font-semibold shadow-md'
-                      : 'text-white/80 hover:bg-white/10 hover:text-white'
+                      ? 'bg-[#e2cef6] text-[#5b0672] font-semibold shadow-sm'
+                      : 'text-white/70 hover:bg-white/10 hover:text-white'
                   } ${item.isSub && sidebarOpen ? 'pl-6' : ''}`
                 }
               >
@@ -132,12 +143,12 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-3 border-t border-white/10 space-y-2">
+        <div className="space-y-2 border-t border-white/10 p-2.5">
           {sidebarOpen && user && (
-            <div className="px-3 py-2 bg-white/10 rounded-lg text-white">
+            <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-white">
               <p className="text-xs font-display font-medium text-white/60 truncate">Autenticado como</p>
-              <p className="text-sm font-semibold truncate">{user.username}</p>
-              <p className="text-[10px] font-mono opacity-80 uppercase tracking-widest">{role}</p>
+              <p className="text-sm font-semibold truncate" title={displayName}>{displayName}</p>
+              <p className="text-[10px] font-mono opacity-80 uppercase tracking-widest">{displayRole}</p>
             </div>
           )}
 
