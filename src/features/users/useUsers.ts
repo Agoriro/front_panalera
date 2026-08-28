@@ -3,13 +3,13 @@ import { getUsersApi, createUserApi, updateUserApi, deleteUserApi, USER_KEYS } f
 import { getRolesApi, ROLE_KEYS } from '../../api/roles'
 import { UserFormInput } from '../../types/user'
 
-export const useUsers = () => {
+export const useUsers = (params = { page: 1, page_size: 50 }) => {
   const queryClient = useQueryClient()
 
   // Users Query
   const usersQuery = useQuery({
-    queryKey: USER_KEYS.all,
-    queryFn: getUsersApi,
+    queryKey: [...USER_KEYS.all, params],
+    queryFn: () => getUsersApi(params),
   })
 
   // Roles Query
@@ -42,7 +42,8 @@ export const useUsers = () => {
   })
 
   return {
-    users: usersQuery.data || [],
+    users: usersQuery.data?.items || [],
+    pagination: usersQuery.data,
     isLoading: usersQuery.isLoading,
     roles: rolesQuery.data || [],
     isLoadingRoles: rolesQuery.isLoading,

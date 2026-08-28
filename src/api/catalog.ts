@@ -11,8 +11,13 @@ export const CATALOG_KEYS = {
 
 // === SUPPLIERS ===
 export async function getSuppliersApi(): Promise<Supplier[]> {
-  const res = await apiClient.get<Supplier[]>('/catalog/suppliers')
-  return res.data
+  const res = await apiClient.get<any[]>('/catalog/suppliers')
+  const data = Array.isArray(res.data) ? res.data : []
+  return data.map((item) => ({
+    ...item,
+    id: item.id ?? item.id_supplier ?? '',
+    name_supplier: item.name_supplier ?? item.name ?? '',
+  }))
 }
 
 export async function createSupplierApi(body: Omit<Supplier, 'id'>): Promise<Supplier> {
@@ -40,6 +45,7 @@ export async function getCategoriesApi(): Promise<Category[]> {
   const data = Array.isArray(res.data) ? res.data : []
   return data.map((item) => ({
     ...item,
+    id: item.id ?? item.id_category ?? '',
     name: item.name ?? item.name_category ?? item.category_name ?? '',
   }))
 }
@@ -78,6 +84,7 @@ export async function getColorsApi(): Promise<Color[]> {
   const data = Array.isArray(res.data) ? res.data : []
   return data.map((item) => ({
     ...item,
+    id: item.id ?? item.id_color ?? '',
     name: item.name ?? item.name_color ?? item.color_name ?? '',
   }))
 }
@@ -116,6 +123,7 @@ export async function getSizesApi(): Promise<Size[]> {
   const data = Array.isArray(res.data) ? res.data : []
   return data.map((item) => ({
     ...item,
+    id: item.id ?? item.id_size ?? '',
     name: item.name ?? item.name_size ?? item.size_name ?? '',
   }))
 }
@@ -154,6 +162,7 @@ export async function getGendersApi(): Promise<Gender[]> {
   const data = Array.isArray(res.data) ? res.data : []
   return data.map((item) => ({
     ...item,
+    id: item.id ?? item.id_gender ?? '',
     name: item.name ?? item.name_gender ?? item.gender_name ?? '',
   }))
 }

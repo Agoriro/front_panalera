@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { User } from '../types/user'
+import { User } from '../types/auth'
 
 interface AuthState {
   user: User | null
@@ -12,6 +12,7 @@ interface AuthState {
   logout: () => void
   setAccessToken: (token: string | null) => void
   setRefreshToken: (token: string | null) => void
+  setTokens: (accessToken: string, refreshToken: string) => void
   toggleSidebar: () => void
   setSidebarOpen: (open: boolean) => void
 }
@@ -30,6 +31,7 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, accessToken: null, refreshToken: null, role: null }),
       setAccessToken: (accessToken) => set({ accessToken }),
       setRefreshToken: (refreshToken) => set({ refreshToken }),
+      setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
     }),

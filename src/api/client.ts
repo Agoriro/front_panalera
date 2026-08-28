@@ -82,6 +82,7 @@ apiClient.interceptors.response.use(
 
       try {
         const refreshToken = useAuthStore.getState().refreshToken
+        if (!refreshToken) throw new Error('No hay refresh token disponible')
         
         // Post refresh request to refresh token endpoint
         const response = await axios.post(`${API_URL}/auth/refresh`, {
@@ -94,10 +95,8 @@ apiClient.interceptors.response.use(
 
         const { access_token, refresh_token: newRefreshToken } = response.data
 
-        useAuthStore.getState().setAccessToken(access_token)
-        if (newRefreshToken) {
-          useAuthStore.getState().setRefreshToken(newRefreshToken)
-        }
+        if (!newRefreshToken) throw new Error('El servidor no devolviÃ³ un refresh token nuevo')
+        useAuthStore.getState().setTokens(access_token, newRefreshToken)
 
         processQueue(null, access_token)
         isRefreshing = false

@@ -78,19 +78,19 @@ export const DashboardPage: React.FC = () => {
   const topProducts = getTopProducts()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       {/* Title */}
       <div>
-        <h1 className="font-display font-bold text-2xl text-text-base dark:text-white">
+        <h1 className="page-title">
           Panel de Control Administrativo
         </h1>
-        <p className="text-sm text-text-muted">
+        <p className="page-description">
           Revisa el rendimiento comercial de la pañalera, ventas mensuales y estado de inventario.
         </p>
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {/* KPI 1: Ventas Mes */}
         <Card className="border-border-soft dark:border-border-soft bg-surface-card dark:bg-card">
           <CardHeader className="p-4 pb-2">
@@ -185,7 +185,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Chart & Top Products Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         {/* Sales Chart (2/3 width) */}
         <Card className="lg:col-span-2 border-border-soft dark:border-border-soft bg-surface-card dark:bg-card">
           <CardHeader>
@@ -208,7 +208,7 @@ export const DashboardPage: React.FC = () => {
                   <Line
                     type="monotone"
                     dataKey="Ventas"
-                    stroke="#9B7DB6"
+                    stroke="#8A0BD2"
                     strokeWidth={2}
                     dot={false}
                     activeDot={{ r: 4 }}

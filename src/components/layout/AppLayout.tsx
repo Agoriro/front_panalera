@@ -8,21 +8,21 @@ export const AppLayout: React.FC = () => {
   const { sidebarOpen } = useAuthStore()
 
   return (
-    <div className="min-h-screen bg-surface dark:bg-[#1A1A24] transition-colors duration-300">
+    <div className="min-h-[100dvh] bg-background transition-colors duration-200">
       {/* Sidebar Navigation */}
       <Sidebar />
 
       {/* Main Content Area */}
       <div
-        className={`flex flex-col min-h-screen transition-all duration-300 ${
-          sidebarOpen ? 'lg:pl-64 pl-20' : 'pl-20'
+        className={`flex min-h-[100dvh] flex-col transition-[padding] duration-200 ${
+          sidebarOpen ? 'lg:pl-64 pl-[4.5rem]' : 'pl-[4.5rem]'
         }`}
       >
         {/* Top Navbar */}
         <Header />
 
         {/* Page Outlet container */}
-        <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto animate-fade-in">
+        <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-5 sm:px-6 md:px-8 md:py-7">
           <Outlet />
         </main>
       </div>

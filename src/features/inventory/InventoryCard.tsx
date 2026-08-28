@@ -3,12 +3,12 @@ import { InventoryItem } from '../../types/inventory'
 import { formatCurrency } from '../../lib/utils'
 import { Card, CardContent, CardFooter, CardHeader } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import { Edit2, Trash2, Tag, Layers, Settings, Barcode, Hash } from 'lucide-react'
+import { Edit2, Trash2, Tag, Layers, Settings, Barcode, Hash, PackageOpen } from 'lucide-react'
 
 interface InventoryCardProps {
   item: InventoryItem
-  onEdit: (item: InventoryItem) => void
-  onDelete: (item: InventoryItem) => void
+  onEdit?: (item: InventoryItem) => void
+  onDelete?: (item: InventoryItem) => void
 }
 
 export const InventoryCard: React.FC<InventoryCardProps> = ({
@@ -44,12 +44,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({
           />
         ) : (
           <div className="flex flex-col items-center justify-center text-primary/30 dark:text-white/20">
-            {/* Cute vector diaper baby stroller icon */}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="h-16 w-16 mb-2">
-              <path d="M9 20c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zM19 20c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2z" />
-              <path d="M12 14V3H3" />
-              <path d="M19 14H8a2 2 0 0 1-2-2V7h15a1 1 0 0 1 1 1.24l-2 5a2 2 0 0 1-2 1.76z" />
-            </svg>
+            <PackageOpen className="mb-2 h-14 w-14" strokeWidth={1.25} aria-hidden="true" />
             <span className="text-[10px] uppercase font-mono tracking-widest text-text-muted">Sin Foto</span>
           </div>
         )}
@@ -121,7 +116,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({
         </div>
       </CardContent>
 
-      <CardFooter className="p-4 pt-0 border-t border-border-soft dark:border-border-soft flex justify-end gap-2 bg-surface/30 dark:bg-muted/5">
+      {onEdit && onDelete && <CardFooter className="p-4 pt-0 border-t border-border-soft dark:border-border-soft flex justify-end gap-2 bg-surface/30 dark:bg-muted/5">
         <Button
           variant="ghost"
           size="sm"
@@ -140,7 +135,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({
           <Trash2 className="h-3.5 w-3.5" />
           Eliminar
         </Button>
-      </CardFooter>
+      </CardFooter>}
     </Card>
   )
 }

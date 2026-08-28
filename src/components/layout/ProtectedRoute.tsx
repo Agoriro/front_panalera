@@ -34,7 +34,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (role === 'Admin') {
       return <Navigate to={ROUTES.DASHBOARD} replace />
     } else {
-      return <Navigate to={ROUTES.SALES} replace />
+      return <Navigate to={ROUTES.INVENTORY} replace />
     }
   }
 

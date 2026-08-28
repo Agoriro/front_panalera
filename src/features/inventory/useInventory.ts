@@ -31,31 +31,31 @@ export const useInventory = (params?: InventoryQueryParams) => {
   const suppliersQuery = useQuery({
     queryKey: CATALOG_KEYS.suppliers,
     queryFn: getSuppliersApi,
-    select: (data) => data.filter((s) => s.is_active),
+    select: (data) => data.filter((item) => item.is_active !== false),
   })
 
   const categoriesQuery = useQuery({
     queryKey: CATALOG_KEYS.categories,
     queryFn: getCategoriesApi,
-    select: (data) => data.filter((c) => c.is_active),
+    select: (data) => data.filter((item) => item.is_active !== false),
   })
 
   const colorsQuery = useQuery({
     queryKey: CATALOG_KEYS.colors,
     queryFn: getColorsApi,
-    select: (data) => data.filter((c) => c.is_active),
+    select: (data) => data.filter((item) => item.is_active !== false),
   })
 
   const sizesQuery = useQuery({
     queryKey: CATALOG_KEYS.sizes,
     queryFn: getSizesApi,
-    select: (data) => data.filter((s) => s.is_active),
+    select: (data) => data.filter((item) => item.is_active !== false),
   })
 
   const gendersQuery = useQuery({
     queryKey: CATALOG_KEYS.genders,
     queryFn: getGendersApi,
-    select: (data) => data.filter((g) => g.is_active),
+    select: (data) => data.filter((item) => item.is_active !== false),
   })
 
   // Mutations
@@ -97,17 +97,38 @@ export const useInventory = (params?: InventoryQueryParams) => {
     },
   })
 
+  const suppliers = suppliersQuery.data || []
+  const categories = categoriesQuery.data || []
+  const colors = colorsQuery.data || []
+  const sizes = sizesQuery.data || []
+  const genders = gendersQuery.data || []
+
+  const inventory = (query.data?.items || []).map((item) => ({
+    ...item,
+    supplier: suppliers.find((catalog) => catalog.id === item.id_supplier),
+    category: categories.find((catalog) => catalog.id === item.id_category),
+    color: colors.find((catalog) => catalog.id === item.id_color),
+    size: sizes.find((catalog) => catalog.id === item.id_size),
+    gender: genders.find((catalog) => catalog.id === item.id_gender),
+  }))
+
   return {
-    inventory: query.data || [],
+    inventory,
+    pagination: query.data ? {
+      total: query.data.total,
+      page: query.data.page,
+      pageSize: query.data.page_size,
+      pages: query.data.pages,
+    } : { total: 0, page: 1, pageSize: params?.page_size || 50, pages: 0 },
     isLoading: query.isLoading,
     error: query.error,
 
     // Catalogs data
-    suppliers: suppliersQuery.data || [],
-    categories: categoriesQuery.data || [],
-    colors: colorsQuery.data || [],
-    sizes: sizesQuery.data || [],
-    genders: gendersQuery.data || [],
+    suppliers,
+    categories,
+    colors,
+    sizes,
+    genders,
     isLoadingCatalogs:
       suppliersQuery.isLoading ||
       categoriesQuery.isLoading ||

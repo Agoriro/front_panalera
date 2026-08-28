@@ -27,9 +27,13 @@ export function formatDate(date: string | Date | number): string {
 
 export function handleApiError(error: unknown) {
   if (isAxiosError(error)) {
+    const status = error.response?.status
     const detail = error.response?.data?.detail
     if (typeof detail === 'string') {
-      toast.error(detail)
+      if (status === 409) toast.error(`Conflicto de datos: ${detail}`)
+      else if (status === 403) toast.error('No tienes permiso para realizar esta acción.')
+      else if (status === 422 && /stock insuficiente/i.test(detail)) toast.error(detail)
+      else toast.error(detail)
       return
     }
     if (Array.isArray(detail)) {

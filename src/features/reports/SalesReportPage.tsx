@@ -8,7 +8,7 @@ import { Label } from '../../components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Skeleton } from '../../components/ui/skeleton'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts'
-import { FileSpreadsheet, FileText, Calendar, Download, TrendingUp, DollarSign, ShoppingCart, Percent } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Eye, FileSpreadsheet, FileText, Home, Percent, ShoppingCart, TrendingUp, DollarSign } from 'lucide-react'
 import { formatCurrency, formatDate } from '../../lib/utils'
 import * as XLSX from 'xlsx'
 import { format, subDays, eachDayOfInterval } from 'date-fns'
@@ -17,42 +17,90 @@ export const SalesReportPage: React.FC = () => {
   // Date Range Defaults (Last 30 Days)
   const [startDateStr, setStartDateStr] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'))
   const [endDateStr, setEndDateStr] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [appliedDates, setAppliedDates] = useState({ start: startDateStr, end: endDateStr })
+  const [activeTab, setActiveTab] = useState('inicio')
+  const [page, setPage] = useState(1)
+  const [visibleReports, setVisibleReports] = useState<Record<string, boolean>>({})
+  const [sort, setSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' })
 
-  const { movements, isLoadingMovements, inventory, isLoadingInventory } = useReports({
-    start_date: new Date(startDateStr).toISOString(),
-    end_date: new Date(endDateStr).toISOString()
+  const { movements, totals, pagination, isLoadingMovements, inventory, isLoadingInventory } = useReports({
+    date_from: new Date(`${appliedDates.start}T00:00:00`).toISOString(),
+    date_to: new Date(`${appliedDates.end}T23:59:59`).toISOString(),
+    page,
+    page_size: 25,
   })
 
   // Grouping Sales movements
   const salesMovements = movements.filter((m) => m.type_movement === 'SELL')
 
+  const applyFilters = () => {
+    setPage(1)
+    setAppliedDates({ start: startDateStr, end: endDateStr })
+    setVisibleReports((current) => ({ ...current, [activeTab]: true }))
+  }
+
+  const changeSort = (key: string) => {
+    setSort((current) => ({ key, direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc' }))
+  }
+
+  const SortableHeader = ({ column, children }: { column: string; children: React.ReactNode }) => {
+    const Icon = sort.key !== column ? ArrowUpDown : sort.direction === 'asc' ? ArrowUp : ArrowDown
+    return (
+      <button type="button" onClick={() => changeSort(column)} className="flex w-full min-h-10 items-center gap-1.5 text-left hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40" aria-label={`Ordenar por ${String(children)}`}>
+        <span>{children}</span><Icon className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+    )
+  }
+
+  const sortedSales = [...salesMovements].sort((a, b) => {
+    const values: Record<string, [string | number, string | number]> = {
+      article: [a.inventory?.description || '', b.inventory?.description || ''],
+      date: [new Date(a.created_at).getTime(), new Date(b.created_at).getTime()],
+      quantity: [a.quantity, b.quantity],
+      unitPrice: [Number(a.value), Number(b.value)],
+      total: [a.quantity * Number(a.value), b.quantity * Number(b.value)],
+      profit: [a.quantity * (Number(a.value) - Number(a.unit_cost)), b.quantity * (Number(b.value) - Number(b.unit_cost))],
+    }
+    const [left, right] = values[sort.key] || values.date
+    const comparison = typeof left === 'string' ? left.localeCompare(String(right), 'es', { sensitivity: 'base' }) : left - Number(right)
+    return sort.direction === 'asc' ? comparison : -comparison
+  })
+
+  const sortedInventory = [...inventory].sort((a, b) => {
+    const values: Record<string, [string | number, string | number]> = {
+      article: [a.description, b.description],
+      category: [a.category?.name || '', b.category?.name || ''],
+      stock: [a.stock_qty || 0, b.stock_qty || 0],
+      cost: [a.cost_price || 0, b.cost_price || 0],
+      valuation: [(a.stock_qty || 0) * (a.cost_price || 0), (b.stock_qty || 0) * (b.cost_price || 0)],
+    }
+    const [left, right] = values[sort.key] || values.article
+    const comparison = typeof left === 'string' ? left.localeCompare(String(right), 'es', { sensitivity: 'base' }) : left - Number(right)
+    return sort.direction === 'asc' ? comparison : -comparison
+  })
+
   // Calculated KPI values
-  const totalSalesVal = salesMovements.reduce((sum, m) => sum + m.quantity * m.value, 0)
+  const totalSalesVal = Number(totals.revenue)
   
   // Calculate utility: utility = (sale_value - cost_value) * quantity
   // Since sale price is sale_value and cost is cost_price:
   // cost = sale_value / (1 + utility_percent / 100)
   // utility = sale_value - cost
-  const totalUtilityVal = salesMovements.reduce((sum, m) => {
-    const saleTotal = m.quantity * m.value
-    const utilityPercent = m.inventory?.utility || 30
-    const costTotal = saleTotal / (1 + utilityPercent / 100)
-    return sum + (saleTotal - costTotal)
-  }, 0)
+  const totalUtilityVal = Number(totals.profit)
 
   // Chart Data: group sales by day
   const getChartData = () => {
     const dates = eachDayOfInterval({
-      start: new Date(startDateStr),
-      end: new Date(endDateStr),
+      start: new Date(appliedDates.start),
+      end: new Date(appliedDates.end),
     })
 
     return dates.map((date) => {
       const dateStr = format(date, 'yyyy-MM-dd')
       const daySales = salesMovements.filter((m) => format(new Date(m.created_at), 'yyyy-MM-dd') === dateStr)
-      const salesSum = daySales.reduce((sum, m) => sum + m.quantity * m.value, 0)
+      const salesSum = daySales.reduce((sum, m) => sum + m.quantity * Number(m.value), 0)
       const utilitySum = daySales.reduce((sum, m) => {
-        const saleTotal = m.quantity * m.value
+        const saleTotal = m.quantity * Number(m.value)
         const utilityPercent = m.inventory?.utility || 30
         const costTotal = saleTotal / (1 + utilityPercent / 100)
         return sum + (saleTotal - costTotal)
@@ -75,7 +123,7 @@ export const SalesReportPage: React.FC = () => {
       const daySales = movements.filter(
         (m) => m.type_movement === 'SELL' && format(new Date(m.created_at), 'yyyy-MM-dd') === dateStr
       )
-      const salesSum = daySales.reduce((sum, m) => sum + m.quantity * m.value, 0)
+      const salesSum = daySales.reduce((sum, m) => sum + m.quantity * Number(m.value), 0)
       return {
         dateStr,
         label: format(date, 'dd/MM'),
@@ -119,9 +167,9 @@ export const SalesReportPage: React.FC = () => {
       Fecha: new Date(m.created_at).toLocaleString('es-CO'),
       Cantidad: m.quantity,
       'Precio Unitario': m.value,
-      'Total Venta': m.quantity * m.value,
+      'Total Venta': m.quantity * Number(m.value),
       'Utilidad %': m.inventory?.utility || 0,
-      'Utilidad Estimada': Math.round(m.quantity * m.value - (m.quantity * m.value) / (1 + (m.inventory?.utility || 30) / 100)),
+      'Utilidad Estimada': Math.round(m.quantity * Number(m.value) - (m.quantity * Number(m.value)) / (1 + (m.inventory?.utility || 30) / 100)),
     }))
 
     const worksheet = XLSX.utils.json_to_sheet(excelData)
@@ -133,7 +181,7 @@ export const SalesReportPage: React.FC = () => {
   // PDF Export via native browser print
   const handleExportPdf = () => {
     const rows = salesMovements.map((m) => {
-      const total = m.quantity * m.value
+      const total = m.quantity * Number(m.value)
       const utilPct = m.inventory?.utility || 30
       const utility = total - total / (1 + utilPct / 100)
       return `
@@ -141,7 +189,7 @@ export const SalesReportPage: React.FC = () => {
           <td>${m.inventory?.description || 'Artículo'}</td>
           <td>${new Date(m.created_at).toLocaleDateString('es-CO')}</td>
           <td>${m.quantity} uds</td>
-          <td>$${m.value.toLocaleString('es-CO')}</td>
+          <td>$${Number(m.value).toLocaleString('es-CO')}</td>
           <td>$${total.toLocaleString('es-CO')}</td>
           <td>$${Math.round(utility).toLocaleString('es-CO')}</td>
         </tr>`
@@ -152,10 +200,10 @@ export const SalesReportPage: React.FC = () => {
       <title>Reporte de Ventas</title>
       <style>
         body { font-family: Arial, sans-serif; font-size: 12px; color: #2D2D3A; padding: 30px; }
-        h1 { color: #9B7DB6; font-size: 20px; margin-bottom: 4px; }
+        h1 { color: #8A0BD2; font-size: 20px; margin-bottom: 4px; }
         p { margin: 2px 0; color: #6B6B7B; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background: #9B7DB6; color: white; padding: 8px; text-align: left; font-size: 11px; }
+        th { background: #8A0BD2; color: white; padding: 8px; text-align: left; font-size: 11px; }
         td { padding: 7px 8px; border-bottom: 1px solid #E8E4F0; font-size: 11px; }
         tr:nth-child(even) td { background: #FAFAF8; }
         .totals { margin-top: 20px; text-align: right; }
@@ -174,7 +222,7 @@ export const SalesReportPage: React.FC = () => {
       </table>
       <div class="totals">
         <p>Total Recaudado: $${Math.round(totalSalesVal).toLocaleString('es-CO')}</p>
-        <p style="color:#7CC4A4">Utilidad Estimada: $${Math.round(totalUtilityVal).toLocaleString('es-CO')}</p>
+        <p style="color:#5B0672">Utilidad Estimada: $${Math.round(totalUtilityVal).toLocaleString('es-CO')}</p>
       </div>
       <script>window.onload = () => { window.print(); }<\/script>
       </body></html>`
@@ -194,9 +242,9 @@ export const SalesReportPage: React.FC = () => {
       Color: item.color?.name || 'N/A',
       Talla: item.size?.name || 'N/A',
       Género: item.gender?.name || 'N/A',
-      'Stock Actual': item.stock_qty,
-      'Costo Unitario': item.cost_price || 0,
-      'Valor Costo Total': item.stock_qty * (item.cost_price || 0),
+      'Stock Actual': Number(item.stock_qty ?? 0),
+      'Costo Unitario': Number(item.cost_price ?? 0),
+      'Valor Costo Total': Number(item.stock_qty ?? 0) * Number(item.cost_price ?? 0),
     }))
 
     const worksheet = XLSX.utils.json_to_sheet(excelData)
@@ -204,6 +252,36 @@ export const SalesReportPage: React.FC = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Valoración de Inventario')
     XLSX.writeFile(workbook, `Existencias_Inventario_${format(new Date(), 'yyyy-MM-dd')}.xlsx`)
   }
+
+  const ReportToolbar = ({ onExcel, onPdf }: { onExcel: () => void; onPdf?: () => void }) => (
+    <Card className="border-border-soft bg-surface-card dark:border-border-soft dark:bg-card">
+      <CardContent className="grid gap-4 p-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+        <div className="space-y-1.5">
+          <Label htmlFor={`${activeTab}-start`} className="text-xs">Fecha inicial</Label>
+          <Input id={`${activeTab}-start`} type="date" value={startDateStr} onChange={(event) => setStartDateStr(event.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`${activeTab}-end`} className="text-xs">Fecha final</Label>
+          <Input id={`${activeTab}-end`} type="date" value={endDateStr} onChange={(event) => setEndDateStr(event.target.value)} />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" onClick={applyFilters} className="gap-2"><Eye className="h-4 w-4" aria-hidden="true" />Ver informe</Button>
+          <Button type="button" onClick={onExcel} variant="outline" className="gap-2"><FileSpreadsheet className="h-4 w-4" aria-hidden="true" />Excel</Button>
+          {onPdf && <Button type="button" onClick={onPdf} variant="outline" className="gap-2"><FileText className="h-4 w-4" aria-hidden="true" />PDF</Button>}
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  const Pagination = ({ pages = 1 }: { pages?: number }) => (
+    <div className="flex items-center justify-between border-t border-border-soft pt-4 text-sm">
+      <span className="text-text-muted">Página {page} de {Math.max(pages, 1)} · 25 registros por página</span>
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page <= 1} aria-label="Página anterior"><ChevronLeft className="h-4 w-4" /></Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => setPage((current) => Math.min(Math.max(pages, 1), current + 1))} disabled={page >= Math.max(pages, 1)} aria-label="Página siguiente"><ChevronRight className="h-4 w-4" /></Button>
+      </div>
+    </div>
+  )
 
   return (
     <div className="space-y-6">
@@ -216,71 +294,31 @@ export const SalesReportPage: React.FC = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="periodo" className="space-y-6">
-        <TabsList className="bg-surface-card border border-border-soft dark:border-border-soft dark:bg-card">
-          <TabsTrigger value="periodo" className="font-display text-sm">Ventas por Período</TabsTrigger>
-          <TabsTrigger value="existencias" className="font-display text-sm">Existencias (Valorización)</TabsTrigger>
-          <TabsTrigger value="proyeccion" className="font-display text-sm">Proyección de Ventas</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={(value) => { setActiveTab(value); setPage(1); setSort({ key: 'date', direction: 'desc' }) }} className="flex w-full flex-col gap-6">
+        <TabsList className="!flex !h-14 !min-h-14 !max-h-14 w-full flex-none items-center justify-start gap-2 overflow-x-auto overflow-y-hidden rounded-xl border border-border-soft bg-surface-card p-1.5 shadow-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-border-soft dark:bg-card">
+          <TabsTrigger value="inicio" className="!h-11 !min-h-11 !max-h-11 flex-none rounded-lg border border-border-soft px-5 font-display text-sm hover:bg-[#e2cef6]/60 hover:text-primary-dark data-active:border-primary data-active:bg-primary data-active:text-primary-foreground dark:hover:bg-primary/15 dark:data-active:bg-primary dark:data-active:text-primary-foreground"><Home className="h-4 w-4" aria-hidden="true" />Inicio</TabsTrigger>
+          <TabsTrigger value="periodo" className="!h-11 !min-h-11 !max-h-11 flex-none rounded-lg border border-border-soft px-5 font-display text-sm hover:bg-[#e2cef6]/60 hover:text-primary-dark data-active:border-primary data-active:bg-primary data-active:text-primary-foreground dark:hover:bg-primary/15 dark:data-active:bg-primary dark:data-active:text-primary-foreground">Ventas por Período</TabsTrigger>
+          <TabsTrigger value="existencias" className="!h-11 !min-h-11 !max-h-11 flex-none rounded-lg border border-border-soft px-5 font-display text-sm hover:bg-[#e2cef6]/60 hover:text-primary-dark data-active:border-primary data-active:bg-primary data-active:text-primary-foreground dark:hover:bg-primary/15 dark:data-active:bg-primary dark:data-active:text-primary-foreground">Existencias (Valorización)</TabsTrigger>
+          <TabsTrigger value="proyeccion" className="!h-11 !min-h-11 !max-h-11 flex-none rounded-lg border border-border-soft px-5 font-display text-sm hover:bg-[#e2cef6]/60 hover:text-primary-dark data-active:border-primary data-active:bg-primary data-active:text-primary-foreground dark:hover:bg-primary/15 dark:data-active:bg-primary dark:data-active:text-primary-foreground">Proyección de Ventas</TabsTrigger>
         </TabsList>
 
-        {/* Tab 1: Ventas por periodo */}
-        <TabsContent value="periodo" className="space-y-6">
-          {/* Filters card */}
-          <Card className="border-border-soft dark:border-border-soft bg-surface-card dark:bg-card">
-            <CardHeader className="pb-4">
-              <CardTitle className="font-display text-base font-semibold">Selector de Rango de Fechas</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col sm:flex-row items-end gap-4">
-              <div className="space-y-1 flex-1">
-                <Label htmlFor="start_date" className="text-xs">Fecha Inicio</Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
-                  <Input
-                    id="start_date"
-                    type="date"
-                    value={startDateStr}
-                    onChange={(e) => setStartDateStr(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1 flex-1">
-                <Label htmlFor="end_date" className="text-xs">Fecha Fin</Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
-                  <Input
-                    id="end_date"
-                    type="date"
-                    value={endDateStr}
-                    onChange={(e) => setEndDateStr(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 w-full sm:w-auto mt-4 sm:mt-0">
-                <Button
-                  onClick={handleExportSalesExcel}
-                  variant="outline"
-                  className="flex-1 sm:flex-initial gap-2 h-10 text-xs"
-                >
-                  <FileSpreadsheet className="h-4 w-4 text-secondary" />
-                  Exportar Excel
-                </Button>
-
-                <Button
-                  onClick={handleExportPdf}
-                  variant="outline"
-                  className="w-full sm:w-auto gap-2 h-10 text-xs"
-                >
-                  <FileText className="h-4 w-4 text-danger" />
-                  Exportar PDF
-                </Button>
-              </div>
-            </CardContent>
+        <TabsContent value="inicio" className="w-full flex-none space-y-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Card className="border-border-soft bg-surface-card dark:border-border-soft dark:bg-card"><CardContent className="flex items-center justify-between p-5"><div><p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Total ventas</p><p className="mt-2 font-mono text-2xl font-bold">{formatCurrency(totalSalesVal)}</p></div><ShoppingCart className="h-6 w-6 text-primary" aria-hidden="true" /></CardContent></Card>
+            <Card className="border-border-soft bg-surface-card dark:border-border-soft dark:bg-card"><CardContent className="flex items-center justify-between p-5"><div><p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Utilidad estimada</p><p className="mt-2 font-mono text-2xl font-bold text-secondary">{formatCurrency(totalUtilityVal)}</p></div><DollarSign className="h-6 w-6 text-secondary" aria-hidden="true" /></CardContent></Card>
+            <Card className="border-border-soft bg-surface-card dark:border-border-soft dark:bg-card"><CardContent className="flex items-center justify-between p-5"><div><p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Margen promedio</p><p className="mt-2 font-mono text-2xl font-bold">{totalSalesVal > 0 ? Math.round((totalUtilityVal / totalSalesVal) * 100) : 0}%</p></div><Percent className="h-6 w-6 text-primary" aria-hidden="true" /></CardContent></Card>
+          </div>
+          <Card className="border-border-soft bg-surface-card dark:border-border-soft dark:bg-card">
+            <CardHeader><CardTitle className="font-display text-base font-semibold">Ventas y utilidades por día</CardTitle><CardDescription>Comportamiento del período aplicado actualmente.</CardDescription></CardHeader>
+            <CardContent className="h-80">{isLoadingMovements ? <Skeleton className="h-full w-full" /> : <ResponsiveContainer width="100%" height="100%"><BarChart data={getChartData()} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="fecha" tickLine={false} axisLine={false} style={{ fontSize: 10 }} /><YAxis tickLine={false} axisLine={false} style={{ fontSize: 10 }} /><RechartsTooltip formatter={(value) => formatCurrency(Number(value))} /><Legend /><Bar dataKey="Ventas" fill="#8A0BD2" radius={[4, 4, 0, 0]} /><Bar dataKey="Utilidad" fill="#AF50E5" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer>}</CardContent>
           </Card>
+        </TabsContent>
 
+        {/* Tab 1: Ventas por periodo */}
+        <TabsContent value="periodo" className="w-full flex-none space-y-6">
+          <ReportToolbar onExcel={handleExportSalesExcel} onPdf={handleExportPdf} />
+
+          {false && <>
           {/* Key Indicators */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card className="border-border-soft dark:border-border-soft bg-surface-card dark:bg-card">
@@ -338,13 +376,15 @@ export const SalesReportPage: React.FC = () => {
                     <YAxis tickLine={false} axisLine={false} style={{ fontSize: 10 }} />
                     <RechartsTooltip formatter={(value) => formatCurrency(Number(value))} />
                     <Legend />
-                    <Bar dataKey="Ventas" fill="#9B7DB6" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Utilidad" fill="#7CC4A4" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Ventas" fill="#8A0BD2" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Utilidad" fill="#AF50E5" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
           </Card>
+
+          </>}
 
           {/* Sales table */}
           <Card className="border-border-soft dark:border-border-soft bg-surface-card dark:bg-card">
@@ -352,7 +392,9 @@ export const SalesReportPage: React.FC = () => {
               <CardTitle className="font-display text-base font-semibold">Movimientos de Venta del Período</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoadingMovements ? (
+              {!visibleReports.periodo ? (
+                <div className="py-10 text-center text-sm text-text-muted">Selecciona las fechas y pulsa “Ver informe”.</div>
+              ) : isLoadingMovements ? (
                 <div className="space-y-2">
                   <Skeleton className="h-8 w-full" />
                   <Skeleton className="h-8 w-full" />
@@ -363,17 +405,17 @@ export const SalesReportPage: React.FC = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="font-semibold">Artículo</TableHead>
-                      <TableHead className="font-semibold">Fecha</TableHead>
-                      <TableHead className="font-semibold">Cantidad</TableHead>
-                      <TableHead className="font-semibold">Precio Unit.</TableHead>
-                      <TableHead className="font-semibold">Venta Total</TableHead>
-                      <TableHead className="font-semibold">Utilidad Est.</TableHead>
+                      <TableHead className="font-semibold"><SortableHeader column="article">Artículo</SortableHeader></TableHead>
+                      <TableHead className="font-semibold"><SortableHeader column="date">Fecha</SortableHeader></TableHead>
+                      <TableHead className="font-semibold"><SortableHeader column="quantity">Cantidad</SortableHeader></TableHead>
+                      <TableHead className="font-semibold"><SortableHeader column="unitPrice">Precio Unit.</SortableHeader></TableHead>
+                      <TableHead className="font-semibold"><SortableHeader column="total">Venta Total</SortableHeader></TableHead>
+                      <TableHead className="font-semibold"><SortableHeader column="profit">Utilidad Est.</SortableHeader></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {salesMovements.map((m) => {
-                      const totalSale = m.quantity * m.value
+                    {sortedSales.map((m) => {
+                      const totalSale = m.quantity * Number(m.value)
                       const cost = totalSale / (1 + (m.inventory?.utility || 30) / 100)
                       const utility = totalSale - cost
 
@@ -382,7 +424,7 @@ export const SalesReportPage: React.FC = () => {
                           <TableCell className="font-medium text-text-base dark:text-white">{m.inventory?.description}</TableCell>
                           <TableCell className="text-xs">{formatDate(m.created_at)}</TableCell>
                           <TableCell>{m.quantity} uds</TableCell>
-                          <TableCell className="font-mono text-xs">{formatCurrency(m.value)}</TableCell>
+                          <TableCell className="font-mono text-xs">{formatCurrency(Number(m.value))}</TableCell>
                           <TableCell className="font-mono font-semibold text-text-base dark:text-white">{formatCurrency(totalSale)}</TableCell>
                           <TableCell className="font-mono font-semibold text-secondary">{formatCurrency(Math.round(utility))}</TableCell>
                         </TableRow>
@@ -391,25 +433,25 @@ export const SalesReportPage: React.FC = () => {
                   </TableBody>
                 </Table>
               )}
+              {visibleReports.periodo && <Pagination pages={pagination?.pages} />}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Tab 2: Existencias / Valoración de Inventario */}
-        <TabsContent value="existencias" className="space-y-6">
+        <TabsContent value="existencias" className="w-full flex-none space-y-6">
+          <ReportToolbar onExcel={handleExportStockExcel} />
           <Card className="border-border-soft dark:border-border-soft bg-surface-card dark:bg-card">
             <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4">
               <div>
                 <CardTitle className="font-display text-base font-semibold">Valoración Física de Inventario</CardTitle>
                 <CardDescription>Muestra el stock actual de mercancías valorizado al costo real.</CardDescription>
               </div>
-              <Button onClick={handleExportStockExcel} variant="outline" className="gap-2 h-9 text-xs">
-                <FileSpreadsheet className="h-4 w-4 text-secondary" />
-                Exportar Existencias a Excel
-              </Button>
             </CardHeader>
             <CardContent>
-              {isLoadingInventory ? (
+              {!visibleReports.existencias ? (
+                <div className="py-10 text-center text-sm text-text-muted">Selecciona las fechas y pulsa “Ver informe”.</div>
+              ) : isLoadingInventory ? (
                 <div className="space-y-2">
                   <Skeleton className="h-8 w-full" />
                   <Skeleton className="h-8 w-full" />
@@ -420,17 +462,18 @@ export const SalesReportPage: React.FC = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="font-semibold">Artículo</TableHead>
-                      <TableHead className="font-semibold">Categoría</TableHead>
-                      <TableHead className="font-semibold">Stock Actual</TableHead>
-                      <TableHead className="font-semibold">Costo Unit.</TableHead>
-                      <TableHead className="font-semibold">Valor Costo Total</TableHead>
+                      <TableHead className="font-semibold"><SortableHeader column="article">Artículo</SortableHeader></TableHead>
+                      <TableHead className="font-semibold"><SortableHeader column="category">Categoría</SortableHeader></TableHead>
+                      <TableHead className="font-semibold"><SortableHeader column="stock">Stock Actual</SortableHeader></TableHead>
+                      <TableHead className="font-semibold"><SortableHeader column="cost">Costo Unit.</SortableHeader></TableHead>
+                      <TableHead className="font-semibold"><SortableHeader column="valuation">Valor Costo Total</SortableHeader></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {inventory.map((item) => {
-                      const cost = item.cost_price || 0
-                      const totalVal = item.stock_qty * cost
+                    {sortedInventory.slice((page - 1) * 25, page * 25).map((item) => {
+                      const stock = Number(item.stock_qty ?? 0)
+                      const cost = Number(item.cost_price ?? 0)
+                      const totalVal = stock * cost
 
                       return (
                         <TableRow key={item.id}>
@@ -438,9 +481,9 @@ export const SalesReportPage: React.FC = () => {
                           <TableCell>{item.category?.name || 'N/A'}</TableCell>
                           <TableCell>
                             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
-                              item.stock_qty === 0 ? 'bg-danger/15 text-danger' : 'bg-secondary/15 text-secondary'
+                              stock === 0 ? 'bg-danger/15 text-danger' : 'bg-secondary/15 text-secondary'
                             }`}>
-                              {item.stock_qty} uds
+                              {stock} uds
                             </span>
                           </TableCell>
                           <TableCell className="font-mono text-xs">{formatCurrency(cost)}</TableCell>
@@ -451,12 +494,14 @@ export const SalesReportPage: React.FC = () => {
                   </TableBody>
                 </Table>
               )}
+              {visibleReports.existencias && <Pagination pages={Math.ceil(inventory.length / 25)} />}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Tab 3: Proyecciones */}
-        <TabsContent value="proyeccion" className="space-y-6">
+        <TabsContent value="proyeccion" className="w-full flex-none space-y-6">
+          <ReportToolbar onExcel={handleExportSalesExcel} onPdf={handleExportPdf} />
           <Card className="border-border-soft dark:border-border-soft bg-surface-card dark:bg-card">
             <CardHeader>
               <CardTitle className="font-display text-base font-semibold flex items-center gap-2">
@@ -468,7 +513,9 @@ export const SalesReportPage: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="h-80">
-              {isLoadingMovements ? (
+              {!visibleReports.proyeccion ? (
+                <div className="flex h-full items-center justify-center text-sm text-text-muted">Selecciona las fechas y pulsa “Ver informe”.</div>
+              ) : isLoadingMovements ? (
                 <Skeleton className="h-full w-full" />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
@@ -478,8 +525,8 @@ export const SalesReportPage: React.FC = () => {
                     <YAxis tickLine={false} axisLine={false} style={{ fontSize: 9 }} />
                     <RechartsTooltip formatter={(value) => formatCurrency(Number(value))} />
                     <Legend />
-                    <Line type="monotone" dataKey="Ventas" stroke="#9B7DB6" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="Proyección" stroke="#F4A97F" strokeWidth={2} strokeDasharray="5 5" dot={true} />
+                    <Line type="monotone" dataKey="Ventas" stroke="#8A0BD2" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="Proyección" stroke="#D980F9" strokeWidth={2} strokeDasharray="5 5" dot={true} />
                   </LineChart>
                 </ResponsiveContainer>
               )}

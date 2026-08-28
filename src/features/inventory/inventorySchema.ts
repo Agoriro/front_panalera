@@ -1,16 +1,18 @@
 import { z } from 'zod'
 
 export const inventorySchema = z.object({
-  description: z.string().min(3, 'La descripción debe tener al menos 3 caracteres'),
+  description: z.string().trim().min(1, 'La descripcion es obligatoria').max(255, 'La descripcion no puede superar 255 caracteres'),
   code_inventory: z
     .string()
     .trim()
+    .max(100, 'El SKU no puede superar 100 caracteres')
     .optional()
     .nullable()
     .transform((val) => (val === '' ? null : val)),
   barcode_inventory: z
     .string()
     .trim()
+    .max(100, 'El codigo de barras no puede superar 100 caracteres')
     .optional()
     .nullable()
     .transform((val) => (val === '' ? null : val)),
