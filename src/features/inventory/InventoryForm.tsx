@@ -10,6 +10,7 @@ import { Label } from '../../components/ui/label'
 import { Button } from '../../components/ui/button'
 import { SearchableSelect } from '../../components/ui/searchable-select'
 import { Loader2, Plus, X, Barcode, Hash } from 'lucide-react'
+import { CreateCatalogButton } from './CreateCatalogButton'
 
 interface InventoryFormProps {
   item?: InventoryItem | null
@@ -200,10 +201,16 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
         {/* Supplier Selector */}
         <div className="space-y-2">
           <Label htmlFor="id_supplier">Proveedor</Label>
-          <SearchableSelect id="id_supplier" disabled={isSubmitting} value={selectedSupplier}
-            onValueChange={(val) => setValue('id_supplier', val, { shouldValidate: true })}
-            options={suppliers.filter((item) => item.id).map((item) => ({ value: item.id, label: item.name_supplier }))}
-            placeholder="Selecciona un proveedor" searchPlaceholder="Buscar proveedor..." />
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <SearchableSelect id="id_supplier" disabled={isSubmitting} value={selectedSupplier}
+                onValueChange={(val) => setValue('id_supplier', val, { shouldValidate: true })}
+                options={suppliers.filter((item) => item.id).map((item) => ({ value: item.id, label: item.name_supplier }))}
+                placeholder="Selecciona un proveedor" searchPlaceholder="Buscar proveedor..." />
+            </div>
+            <CreateCatalogButton catalog="suppliers" disabled={isSubmitting}
+              onCreated={(id) => setValue('id_supplier', id, { shouldValidate: true, shouldDirty: true })} />
+          </div>
           {errors.id_supplier && (
             <p className="text-xs text-danger font-medium">{errors.id_supplier.message}</p>
           )}
@@ -212,10 +219,16 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
         {/* Category Selector */}
         <div className="space-y-2">
           <Label htmlFor="id_category">Categoría</Label>
-          <SearchableSelect id="id_category" disabled={isSubmitting} value={selectedCategory}
-            onValueChange={(val) => setValue('id_category', val, { shouldValidate: true })}
-            options={categories.filter((item) => item.id).map((item) => ({ value: item.id, label: item.name }))}
-            placeholder="Selecciona una categoría" searchPlaceholder="Buscar categoría..." />
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <SearchableSelect id="id_category" disabled={isSubmitting} value={selectedCategory}
+                onValueChange={(val) => setValue('id_category', val, { shouldValidate: true })}
+                options={categories.filter((item) => item.id).map((item) => ({ value: item.id, label: item.name }))}
+                placeholder="Selecciona una categoría" searchPlaceholder="Buscar categoría..." />
+            </div>
+            <CreateCatalogButton catalog="categories" disabled={isSubmitting}
+              onCreated={(id) => setValue('id_category', id, { shouldValidate: true, shouldDirty: true })} />
+          </div>
           {errors.id_category && (
             <p className="text-xs text-danger font-medium">{errors.id_category.message}</p>
           )}
@@ -225,10 +238,16 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="id_color">Color</Label>
-            <SearchableSelect id="id_color" disabled={isSubmitting} value={selectedColor}
-              onValueChange={(val) => setValue('id_color', val, { shouldValidate: true })}
-              options={colors.filter((item) => item.id).map((item) => ({ value: item.id, label: item.name, color: item.hex_value || item.hex_color }))}
-              placeholder="Color" searchPlaceholder="Buscar color..." />
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <SearchableSelect id="id_color" disabled={isSubmitting} value={selectedColor}
+                  onValueChange={(val) => setValue('id_color', val, { shouldValidate: true })}
+                  options={colors.filter((item) => item.id).map((item) => ({ value: item.id, label: item.name, color: item.hex_value || item.hex_color }))}
+                  placeholder="Color" searchPlaceholder="Buscar color..." />
+              </div>
+              <CreateCatalogButton catalog="colors" disabled={isSubmitting}
+                onCreated={(id) => setValue('id_color', id, { shouldValidate: true, shouldDirty: true })} />
+            </div>
             {errors.id_color && (
               <p className="text-xs text-danger font-medium">{errors.id_color.message}</p>
             )}
@@ -236,10 +255,16 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="id_size">Talla / Etapa</Label>
-            <SearchableSelect id="id_size" disabled={isSubmitting} value={selectedSize}
-              onValueChange={(val) => setValue('id_size', val, { shouldValidate: true })}
-              options={sizes.filter((item) => item.id).map((item) => ({ value: item.id, label: item.name }))}
-              placeholder="Talla" searchPlaceholder="Buscar talla..." />
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <SearchableSelect id="id_size" disabled={isSubmitting} value={selectedSize}
+                  onValueChange={(val) => setValue('id_size', val, { shouldValidate: true })}
+                  options={sizes.filter((item) => item.id).map((item) => ({ value: item.id, label: item.name }))}
+                  placeholder="Talla" searchPlaceholder="Buscar talla..." />
+              </div>
+              <CreateCatalogButton catalog="sizes" disabled={isSubmitting}
+                onCreated={(id) => setValue('id_size', id, { shouldValidate: true, shouldDirty: true })} />
+            </div>
             {errors.id_size && (
               <p className="text-xs text-danger font-medium">{errors.id_size.message}</p>
             )}
@@ -249,10 +274,16 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="id_gender" className="min-h-8 items-end">Género</Label>
-            <SearchableSelect id="id_gender" disabled={isSubmitting} value={selectedGender}
-              onValueChange={(val) => setValue('id_gender', val, { shouldValidate: true })}
-              options={genders.filter((item) => item.id).map((item) => ({ value: item.id, label: item.name }))}
-              placeholder="Género" searchPlaceholder="Buscar género..." />
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <SearchableSelect id="id_gender" disabled={isSubmitting} value={selectedGender}
+                  onValueChange={(val) => setValue('id_gender', val, { shouldValidate: true })}
+                  options={genders.filter((item) => item.id).map((item) => ({ value: item.id, label: item.name }))}
+                  placeholder="Género" searchPlaceholder="Buscar género..." />
+              </div>
+              <CreateCatalogButton catalog="genders" disabled={isSubmitting}
+                onCreated={(id) => setValue('id_gender', id, { shouldValidate: true, shouldDirty: true })} />
+            </div>
             {errors.id_gender && (
               <p className="text-xs text-danger font-medium">{errors.id_gender.message}</p>
             )}

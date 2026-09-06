@@ -1,9 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getMovementsApi, createPurchaseApi, createSaleApi, MOVEMENT_KEYS } from '../../api/movements'
+import { getMovementsApi, createPurchaseApi, createSaleApi, updateMovementApi, MOVEMENT_KEYS } from '../../api/movements'
 import { getInventoryApi, INVENTORY_KEYS } from '../../api/inventory'
-import { getSuppliersApi, CATALOG_KEYS } from '../../api/catalog'
+import { getSuppliersApi, getColorsApi, getSizesApi, CATALOG_KEYS } from '../../api/catalog'
 import type { Page } from '../../types/pagination'
-import type { Movement } from '../../types/movement'
+import type { Movement, MovementUpdateInput } from '../../types/movement'
+
+export const useUpdateMovement = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: MovementUpdateInput }) => updateMovementApi(id, body),
+    onSuccess: async (updated) => {
+      await queryClient.cancelQueries({ queryKey: MOVEMENT_KEYS.all })
+      queryClient.setQueryData<Page<Movement>>(MOVEMENT_KEYS.all, (current) => current && ({
+        ...current,
+        items: current.items.map((item) => item.id === updated.id ? updated : item),
+      }))
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: MOVEMENT_KEYS.all, refetchType: 'none' }),
+        queryClient.invalidateQueries({ queryKey: INVENTORY_KEYS.all }),
+        queryClient.invalidateQueries({ queryKey: ['reports'] }),
+      ])
+    },
+  })
+}
 
 export const useMovements = (inventorySearch = '') => {
   const queryClient = useQueryClient()
@@ -28,6 +47,9 @@ export const useMovements = (inventorySearch = '') => {
   })
 
   // Create Movement Mutation
+  const colorsQuery = useQuery({ queryKey: CATALOG_KEYS.colors, queryFn: getColorsApi })
+  const sizesQuery = useQuery({ queryKey: CATALOG_KEYS.sizes, queryFn: getSizesApi })
+
   const purchaseMutation = useMutation({
     mutationFn: createPurchaseApi,
     onSuccess: (createdMovement) => {
@@ -81,6 +103,8 @@ export const useMovements = (inventorySearch = '') => {
       }, 0),
       cost_price: latestPurchase ? Number(latestPurchase.unit_cost) : 0,
       supplier: suppliers.find((supplier) => supplier.id === item.id_supplier),
+      color: colorsQuery.data?.find((color) => color.id === item.id_color) || item.color,
+      size: sizesQuery.data?.find((size) => size.id === item.id_size) || item.size,
     }
   })
 

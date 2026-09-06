@@ -1,5 +1,5 @@
 import apiClient from './client'
-import { Movement, PurchaseFormInput, SaleFormInput } from '../types/movement'
+import { Movement, MovementUpdateInput, PurchaseFormInput, SaleFormInput } from '../types/movement'
 import { Page, PageParams } from '../types/pagination'
 
 export const MOVEMENT_KEYS = {
@@ -38,4 +38,9 @@ export async function createPurchaseApi(body: PurchaseFormInput): Promise<Moveme
 export async function createSaleApi(body: SaleFormInput): Promise<Movement> {
   const res = await apiClient.post<MovementWire>('/movements/sale', body)
   return { ...normalizeMovement(res.data), type_movement: 'SELL' }
+}
+
+export async function updateMovementApi(id: string, body: MovementUpdateInput): Promise<Movement> {
+  const res = await apiClient.put<MovementWire>(`/movements/${id}`, body)
+  return normalizeMovement(res.data)
 }

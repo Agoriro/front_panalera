@@ -29,3 +29,9 @@ export interface PurchaseFormInput extends MovementFormInput {
 export interface SaleFormInput extends MovementFormInput {
   value: number;
 }
+
+export interface MovementUpdateInput {
+  quantity: number;
+  value: number;
+  id_supplier?: string;
+}
