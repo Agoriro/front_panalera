@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useMovements } from './useMovements'
+import { EditMovementButton } from './EditMovementButton'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -183,6 +184,7 @@ export const PurchasePage: React.FC = () => {
                   options={inventory.map((item) => ({
                     value: item.id,
                     label: `${item.code_inventory ? `[${item.code_inventory}] ` : ''}${item.description}`,
+                    description: `Color: ${item.color?.name || 'Sin color'} · Talla: ${item.size?.name || 'Sin talla'}`,
                     keywords: item.barcode_inventory || '',
                   }))}
                   placeholder="Busca por código, descripción o código de barras"
@@ -319,6 +321,7 @@ export const PurchasePage: React.FC = () => {
                       <TableHead className="font-display font-semibold"><SortableHeader column="quantity">Cant.</SortableHeader></TableHead>
                       <TableHead className="font-display font-semibold"><SortableHeader column="unitCost">Costo Unit.</SortableHeader></TableHead>
                       <TableHead className="font-display font-semibold"><SortableHeader column="total">Total</SortableHeader></TableHead>
+                      <TableHead>Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -336,6 +339,7 @@ export const PurchasePage: React.FC = () => {
                           <TableCell>{move.quantity} uds</TableCell>
                           <TableCell className="font-mono text-xs">{formatCurrency(Number(move.value))}</TableCell>
                           <TableCell className="font-mono font-semibold">{formatCurrency(totalCost)}</TableCell>
+                          <TableCell><EditMovementButton movement={move} onUpdated={(updated) => setRegisteredPurchases((current) => current.map((item) => item.id === updated.id ? updated : item))} /></TableCell>
                         </TableRow>
                       )
                     })}

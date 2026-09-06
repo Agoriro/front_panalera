@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useMovements } from './useMovements'
+import { EditMovementButton } from './EditMovementButton'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -66,14 +67,9 @@ export const SalePage: React.FC = () => {
   const watchedValue = watch('value') || 0
   const isBelowSuggested = Boolean(selectedProduct && suggestedPrice > 0 && watchedValue < suggestedPrice)
 
-  // Filter today's sales movements
-  const todaySales = movements
-    .filter((m) => {
-      if (m.type_movement !== 'SELL') return false
-      const mDate = new Date(m.created_at).toDateString()
-      const todayDate = new Date().toDateString()
-      return mDate === todayDate
-    })
+  // Sales history
+  const saleMovements = movements
+    .filter((m) => m.type_movement === 'SELL')
     .sort((a, b) => {
       const values: Record<SaleSortKey, [string | number, string | number]> = {
         article: [a.inventory?.description || '', b.inventory?.description || ''],
@@ -208,6 +204,7 @@ export const SalePage: React.FC = () => {
                   options={inventory.map((item) => ({
                     value: item.id,
                     label: `${item.code_inventory ? `[${item.code_inventory}] ` : ''}${item.description} · ${item.stock_qty} uds`,
+                    description: `Color: ${item.color?.name || 'Sin color'} · Talla: ${item.size?.name || 'Sin talla'}`,
                     keywords: item.barcode_inventory || '',
                   }))}
                   placeholder="Busca por código, descripción o código de barras"
@@ -295,8 +292,8 @@ export const SalePage: React.FC = () => {
         {/* History Table */}
         <Card className="lg:col-span-2 border-border-soft dark:border-border-soft bg-surface-card dark:bg-card">
           <CardHeader>
-            <CardTitle className="font-display text-lg font-semibold">Ventas del Día</CardTitle>
-            <CardDescription>Resumen de transacciones realizadas hoy.</CardDescription>
+            <CardTitle className="font-display text-lg font-semibold">Historial de Ventas</CardTitle>
+            <CardDescription>Ventas registradas. Puedes editar cada movimiento.</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoadingMovements ? (
@@ -304,9 +301,9 @@ export const SalePage: React.FC = () => {
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
               </div>
-            ) : todaySales.length === 0 ? (
+            ) : saleMovements.length === 0 ? (
               <p className="text-sm text-text-muted text-center py-6">
-                No se han registrado ventas hoy.
+                No se han registrado ventas.
               </p>
             ) : (
               <div className="overflow-x-auto">
@@ -318,10 +315,11 @@ export const SalePage: React.FC = () => {
                       <TableHead className="font-display font-semibold"><SortableHeader column="quantity">Cantidad</SortableHeader></TableHead>
                       <TableHead className="font-display font-semibold"><SortableHeader column="unitPrice">Precio Unit.</SortableHeader></TableHead>
                       <TableHead className="font-display font-semibold"><SortableHeader column="total">Total Venta</SortableHeader></TableHead>
+                      <TableHead>Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {todaySales.map((move) => {
+                    {saleMovements.map((move) => {
                       const unitPrice = Number(move.value)
                       const totalSale = move.quantity * unitPrice
                       return (
@@ -333,6 +331,7 @@ export const SalePage: React.FC = () => {
                           <TableCell>{move.quantity} uds</TableCell>
                           <TableCell className="font-mono text-xs">{formatCurrency(unitPrice)}</TableCell>
                           <TableCell className="font-mono font-semibold text-secondary">{formatCurrency(totalSale)}</TableCell>
+                          <TableCell><EditMovementButton movement={move} /></TableCell>
                         </TableRow>
                       )
                     })}
